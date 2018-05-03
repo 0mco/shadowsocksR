@@ -5,22 +5,21 @@ ShadowsocksR
 
 A fast tunnel proxy that helps you bypass firewalls.
 
+UPDATE
+------
+
+### Support for SSR link
+
+    python3 local.py -L "ssr://your-ssr-link"
+
+### TODO
+
+    * Support for subscribe
+
 Server
 ------
 
 ### Install
-
-Debian / Ubuntu:
-
-    apt-get install git
-    git clone https://github.com/shadowsocksr/shadowsocksr.git
-
-CentOS:
-
-    yum install git
-    git clone https://github.com/shadowsocksr/shadowsocksr.git
-
-Windows:
 
     git clone https://github.com/shadowsocksr/shadowsocksr.git
 
