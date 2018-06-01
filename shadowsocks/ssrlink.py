@@ -38,17 +38,22 @@ def decode_ssrlink(link):
     for param in optional_config.split('&'):
         if param:           # remove empty param
             k, v = param.split('=')
-            missing_padding = len(v) % 4
-            if missing_padding != 0:
-                v += '=' * (4 - missing_padding)
-            config[k] = base64_decode(v)
+            try:
+                config[k] = base64_decode(v)
+            except Exception:      # in case that this is not a base64encoded string, use the original string instead.
+                config[k] = v
     return config
+
+
+def is_valide_ssrlink(ssrlink):
+    return ssrlink[0:6] == 'ssr://'
 
 
 if __name__ == "__main__":
     import sys
     if len(sys.argv) == 2:
         # s = common.to_str(base64.urlsafe_b64decode(common.to_bytes(adjust_padding(sys.argv[1]))))
-        s = base64_decode(sys.argv[1])
-        a = s.split('\n')
-        print(a)
+        # s = base64_decode(sys.argv[1])
+        # a = s.split('\n')
+        # print(a)
+        print(decode_ssrlink(sys.argv[1]))
