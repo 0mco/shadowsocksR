@@ -330,9 +330,8 @@ def print_help(is_local):
 
 
 def print_local_help():
-    print('''usage: sslocal [OPTION]...
-A fast tunnel proxy that helps you bypass firewalls.
-
+    print('''A fast tunnel proxy that helps you bypass firewalls.
+usage: sslocal [OPTION]...
 You can supply configurations via either config file or command line arguments.
 
 Proxy options:
