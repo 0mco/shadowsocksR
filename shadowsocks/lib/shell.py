@@ -23,9 +23,9 @@ import json
 import sys
 import getopt
 import logging
-from shadowsocks.common import to_bytes, to_str, IPNetwork, PortRange
-from shadowsocks import encrypt
-
+from shadowsocks.core.common import to_bytes, to_str, IPNetwork, PortRange
+from shadowsocks.core import encrypt
+from shadowsocks.lib.ssrlink import decode_ssrlink
 
 VERBOSE_LEVEL = 5
 
@@ -52,6 +52,7 @@ def print_exception(e):
         import traceback
         traceback.print_exc()
 
+
 def __version():
     version_str = ''
     try:
@@ -65,8 +66,10 @@ def __version():
             pass
     return version_str
 
+
 def print_shadowsocks():
     print('ShadowsocksR %s' % __version())
+
 
 def log_shadowsocks_version():
     logging.info('ShadowsocksR %s' % __version())
@@ -83,6 +86,7 @@ def find_config():
         return file_name if os.path.exists(file_name) else None
 
     return sub_find(user_config_path) or sub_find(config_path)
+
 
 def check_config(config, is_local):
     if config.get('daemon', None) == 'stop':
@@ -107,16 +111,17 @@ def check_config(config, is_local):
         config['server_port'] = int(config['server_port'])
 
     if config.get('local_address', '') in [b'0.0.0.0']:
-        logging.warning('warning: local set to listen on 0.0.0.0, it\'s not safe')
+        logging.warning(
+            'warning: local set to listen on 0.0.0.0, it\'s not safe')
     if config.get('server', '') in ['127.0.0.1', 'localhost']:
-        logging.warning('warning: server set to listen on %s:%s, are you sure?' %
-                     (to_str(config['server']), config['server_port']))
+        logging.warning('warning: server set to listen on %s:%s, are you sure?'
+                        % (to_str(config['server']), config['server_port']))
     if config.get('timeout', 300) < 100:
-        logging.warning('warning: your timeout %d seems too short' %
-                     int(config.get('timeout')))
+        logging.warning('warning: your timeout %d seems too short' % int(
+            config.get('timeout')))
     if config.get('timeout', 300) > 600:
-        logging.warning('warning: your timeout %d seems too long' %
-                     int(config.get('timeout')))
+        logging.warning('warning: your timeout %d seems too long' % int(
+            config.get('timeout')))
     if config.get('password') in [b'mypassword']:
         logging.error('DON\'T USE DEFAULT PASSWORD! Please change it in your '
                       'config.json!')
@@ -133,16 +138,20 @@ def get_config(is_local):
     global verbose
     config = {}
     config_path = None
-    logging.basicConfig(level=logging.INFO,
-                        format='%(levelname)-s: %(message)s')
-    if is_local:
-        shortopts = 'hd:s:b:p:k:l:m:O:o:G:g:c:t:vq'
-        longopts = ['help', 'fast-open', 'pid-file=', 'log-file=', 'user=',
-                    'version']
+    logging.basicConfig(
+        level=logging.INFO, format='%(levelname)-s: %(message)s')
+    if is_local:  # check this is a client or a server.
+        shortopts = 'hd:s:b:p:k:l:m:O:o:G:g:c:t:L:vq'
+        longopts = [
+            'help', 'fast-open', 'link', 'pid-file=', 'log-file=', 'user=',
+            'version'
+        ]
     else:
         shortopts = 'hd:s:p:k:m:O:o:G:g:c:t:vq'
-        longopts = ['help', 'fast-open', 'pid-file=', 'log-file=', 'workers=',
-                    'forbidden-ip=', 'user=', 'manager-address=', 'version']
+        longopts = [
+            'help', 'fast-open', 'pid-file=', 'log-file=', 'workers=',
+            'forbidden-ip=', 'user=', 'manager-address=', 'version'
+        ]
     try:
         optlist, args = getopt.getopt(sys.argv[1:], shortopts, longopts)
         for key, value in optlist:
@@ -160,16 +169,15 @@ def get_config(is_local):
         if config_path is None:
             config_path = find_config()
 
-
         if config_path:
             logging.debug('loading config from %s' % config_path)
             with open(config_path, 'rb') as f:
                 try:
-                    config = parse_json_in_str(remove_comment(f.read().decode('utf8')))
+                    config = parse_json_in_str(
+                        remove_comment(f.read().decode('utf8')))
                 except ValueError as e:
                     logging.error('found an error in config.json: %s', str(e))
                     sys.exit(1)
-
 
         v_count = 0
         for key, value in optlist:
@@ -221,6 +229,15 @@ def get_config(is_local):
                 config['verbose'] = v_count
             else:
                 continue
+        optlist_ = dict(optlist)
+        if '-L' in optlist_ or '--link' in optlist_:
+            if '-L' in optlist_:  # override config if ssr link is provided.
+                config_from_ssrlink = decode_ssrlink(optlist_.get('-L'))
+            else:
+                config_from_ssrlink = decode_ssrlink(optlist_.get('--link'))
+            print(config_from_ssrlink)
+            config.update(config_from_ssrlink)
+
     except getopt.GetoptError as e:
         print(e, file=sys.stderr)
         print_help(is_local)
@@ -239,7 +256,8 @@ def get_config(is_local):
     config['obfs_param'] = to_str(config.get('obfs_param', ''))
     config['port_password'] = config.get('port_password', None)
     config['additional_ports'] = config.get('additional_ports', {})
-    config['additional_ports_only'] = config.get('additional_ports_only', False)
+    config['additional_ports_only'] = config.get('additional_ports_only',
+                                                 False)
     config['timeout'] = int(config.get('timeout', 300))
     config['udp_timeout'] = int(config.get('udp_timeout', 120))
     config['udp_cache'] = int(config.get('udp_cache', 64))
@@ -267,7 +285,8 @@ def get_config(is_local):
             logging.error(e)
             sys.exit(2)
         try:
-            config['forbidden_port'] = PortRange(config.get('forbidden_port', ''))
+            config['forbidden_port'] = PortRange(
+                config.get('forbidden_port', ''))
         except Exception as e:
             logging.error(e)
             sys.exit(2)
@@ -292,9 +311,11 @@ def get_config(is_local):
     else:
         level = logging.INFO
     verbose = config['verbose']
-    logging.basicConfig(level=level,
-                        format='%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(
+        level=level,
+        format=
+        '%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
 
     check_config(config, is_local)
 
@@ -398,6 +419,7 @@ def _decode_dict(data):
         rv[key] = value
     return rv
 
+
 class JSFormat:
     def __init__(self):
         self.state = 0
@@ -434,6 +456,7 @@ class JSFormat:
                 self.state = 0
                 return "\n"
         return ""
+
 
 def remove_comment(json):
     fmt = JSFormat()

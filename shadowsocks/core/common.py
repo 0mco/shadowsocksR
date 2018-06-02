@@ -24,7 +24,8 @@ import logging
 import binascii
 import re
 
-from shadowsocks import lru_cache
+from shadowsocks.core import lru_cache
+
 
 def compat_ord(s):
     if type(s) == int:
@@ -45,6 +46,7 @@ chr = compat_chr
 
 connect_log = logging.debug
 
+
 def to_bytes(s):
     if bytes != str:
         if type(s) == str:
@@ -58,6 +60,7 @@ def to_str(s):
             return s.decode('utf-8')
     return s
 
+
 def int32(x):
     if x > 0xFFFFFFFF or x < 0:
         x &= 0xFFFFFFFF
@@ -68,6 +71,7 @@ def int32(x):
         else:
             return -2147483648
     return x
+
 
 def inet_ntop(family, ipstr):
     if family == socket.AF_INET:
@@ -138,7 +142,6 @@ def patch_socket():
 
 patch_socket()
 
-
 ADDRTYPE_IPV4 = 1
 ADDRTYPE_IPV6 = 4
 ADDRTYPE_HOST = 3
@@ -158,6 +161,7 @@ def pack_addr(address):
     if len(address) > 255:
         address = address[:255]  # TODO
     return b'\x03' + chr(len(address)) + address
+
 
 def pre_parse_header(data):
     if not data:
@@ -200,6 +204,7 @@ def pre_parse_header(data):
             data += ogn_data[data_size:]
     return data
 
+
 def parse_header(data):
     addrtype = ord(data[0])
     dest_addr = None
@@ -219,8 +224,8 @@ def parse_header(data):
             addrlen = ord(data[1])
             if len(data) >= 4 + addrlen:
                 dest_addr = data[2:2 + addrlen]
-                dest_port = struct.unpack('>H', data[2 + addrlen:4 +
-                                                     addrlen])[0]
+                dest_port = struct.unpack('>H',
+                                          data[2 + addrlen:4 + addrlen])[0]
                 header_length = 4 + addrlen
             else:
                 logging.warn('header is too short')
@@ -286,13 +291,15 @@ class IPNetwork(object):
         addr_family = is_ip(addr)
         if addr_family is socket.AF_INET:
             ip, = struct.unpack("!I", socket.inet_aton(addr))
-            return any(map(lambda n_ps: n_ps[0] == ip >> n_ps[1],
-                           self._network_list_v4))
+            return any(
+                map(lambda n_ps: n_ps[0] == ip >> n_ps[1],
+                    self._network_list_v4))
         elif addr_family is socket.AF_INET6:
             hi, lo = struct.unpack("!QQ", inet_pton(addr_family, addr))
             ip = (hi << 64) | lo
-            return any(map(lambda n_ps: n_ps[0] == ip >> n_ps[1],
-                           self._network_list_v6))
+            return any(
+                map(lambda n_ps: n_ps[0] == ip >> n_ps[1],
+                    self._network_list_v6))
         else:
             return False
 
@@ -304,6 +311,7 @@ class IPNetwork(object):
 
     def __ne__(self, other):
         return self.addrs_str != other.addrs_str
+
 
 class PortRange(object):
     def __init__(self, range_str):
@@ -342,8 +350,10 @@ class PortRange(object):
     def __ne__(self, other):
         return self.range_str != other.range_str
 
+
 class UDPAsyncDNSHandler(object):
     dns_cache = lru_cache.LRUCache(timeout=1800)
+
     def __init__(self, params):
         self.params = params
         self.remote_addr = None
@@ -352,7 +362,9 @@ class UDPAsyncDNSHandler(object):
     def resolve(self, dns_resolver, remote_addr, call_back):
         if remote_addr in UDPAsyncDNSHandler.dns_cache:
             if call_back:
-                call_back("", remote_addr, UDPAsyncDNSHandler.dns_cache[remote_addr], self.params)
+                call_back("", remote_addr,
+                          UDPAsyncDNSHandler.dns_cache[remote_addr],
+                          self.params)
         else:
             self.call_back = call_back
             self.remote_addr = remote_addr
@@ -361,14 +373,16 @@ class UDPAsyncDNSHandler(object):
 
     def _handle_dns_resolved(self, result, error):
         if error:
-            logging.error("%s when resolve DNS" % (error,)) #drop
+            logging.error("%s when resolve DNS" % (error, ))  #drop
             return self.call_back(error, self.remote_addr, None, self.params)
         if result:
             ip = result[1]
             if ip:
                 return self.call_back("", self.remote_addr, ip, self.params)
-        logging.warning("can't resolve %s" % (self.remote_addr,))
-        return self.call_back("fail to resolve", self.remote_addr, None, self.params)
+        logging.warning("can't resolve %s" % (self.remote_addr, ))
+        return self.call_back("fail to resolve", self.remote_addr, None,
+                              self.params)
+
 
 def test_inet_conv():
     ipv4 = b'8.8.4.4'

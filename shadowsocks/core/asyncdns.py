@@ -27,11 +27,12 @@ import logging
 if __name__ == '__main__':
     import sys
     import inspect
-    file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
-    sys.path.insert(0, os.path.join(file_path, '../'))
+    file_path = os.path.dirname(
+        os.path.realpath(inspect.getfile(inspect.currentframe())))
+    sys.path.insert(0, os.path.join(file_path, '../../'))
 
-from shadowsocks import common, lru_cache, eventloop, shell
-
+from shadowsocks.core import common, lru_cache, eventloop
+from shadowsocks.lib import shell
 
 CACHE_SWEEP_INTERVAL = 30
 
@@ -77,6 +78,7 @@ QTYPE_CNAME = 5
 QTYPE_NS = 2
 QCLASS_IN = 1
 
+
 def detect_ipv6_supprot():
     if 'has_ipv6' in dir(socket):
         try:
@@ -89,7 +91,9 @@ def detect_ipv6_supprot():
     print('IPv6 not support')
     return False
 
+
 IPV6_CONNECTION_SUPPORT = detect_ipv6_supprot()
+
 
 def build_address(address):
     address = address.strip(b'.')
@@ -171,15 +175,13 @@ def parse_record(data, offset, question=False):
     nlen, name = parse_name(data, offset)
     if not question:
         record_type, record_class, record_ttl, record_rdlength = struct.unpack(
-            '!HHiH', data[offset + nlen:offset + nlen + 10]
-        )
+            '!HHiH', data[offset + nlen:offset + nlen + 10])
         ip = parse_ip(record_type, data, record_rdlength, offset + nlen + 10)
         return nlen + 10 + record_rdlength, \
             (name, ip, record_type, record_class, record_ttl)
     else:
         record_type, record_class = struct.unpack(
-            '!HH', data[offset + nlen:offset + nlen + 4]
-        )
+            '!HH', data[offset + nlen:offset + nlen + 4])
         return nlen + 4, (name, None, record_type, record_class, None, None)
 
 
@@ -266,7 +268,6 @@ STATUS_IPV6 = 1
 
 
 class DNSResolver(object):
-
     def __init__(self):
         self._loop = None
         self._hosts = {}
@@ -321,7 +322,7 @@ class DNSResolver(object):
                 pass
         if not self._servers:
             self._servers = [('8.8.4.4', 53), ('8.8.8.8', 53)]
-        logging.info('dns server: %s' % (self._servers,))
+        logging.info('dns server: %s' % (self._servers, ))
 
     def _parse_hosts(self):
         etc_path = '/etc/hosts'
@@ -389,7 +390,8 @@ class DNSResolver(object):
                     if ip:
                         self._cache[hostname] = ip
                         self._call_callback(hostname, ip)
-                    elif self._hostname_status.get(hostname, None) == STATUS_IPV4:
+                    elif self._hostname_status.get(hostname,
+                                                   None) == STATUS_IPV4:
                         for question in response.questions:
                             if question[1] == QTYPE_A:
                                 self._call_callback(hostname, None)
@@ -403,7 +405,8 @@ class DNSResolver(object):
                     if ip:
                         self._cache[hostname] = ip
                         self._call_callback(hostname, ip)
-                    elif self._hostname_status.get(hostname, None) == STATUS_IPV6:
+                    elif self._hostname_status.get(hostname,
+                                                   None) == STATUS_IPV6:
                         for question in response.questions:
                             if question[1] == QTYPE_AAAA:
                                 self._call_callback(hostname, None)
@@ -470,11 +473,11 @@ class DNSResolver(object):
                 callback(None, Exception('invalid hostname: %s' % hostname))
                 return
             if False:
-                addrs = socket.getaddrinfo(hostname, 0, 0,
-                                       socket.SOCK_DGRAM, socket.SOL_UDP)
+                addrs = socket.getaddrinfo(hostname, 0, 0, socket.SOCK_DGRAM,
+                                           socket.SOL_UDP)
                 if addrs:
                     af, socktype, proto, canonname, sa = addrs[0]
-                    logging.debug('DNS resolve %s %s' % (hostname, sa[0]) )
+                    logging.debug('DNS resolve %s %s' % (hostname, sa[0]))
                     self._cache[hostname] = sa[0]
                     callback((hostname, sa[0]), None)
                     return
@@ -524,10 +527,11 @@ def test():
             if counter == 9:
                 dns_resolver.close()
                 loop.stop()
+
         a_callback = callback
         return a_callback
 
-    assert(make_callback() != make_callback())
+    assert (make_callback() != make_callback())
 
     dns_resolver.resolve(b'google.com', make_callback())
     dns_resolver.resolve('google.com', make_callback())
@@ -536,20 +540,21 @@ def test():
     dns_resolver.resolve('www.facebook.com', make_callback())
     dns_resolver.resolve('ns2.google.com', make_callback())
     dns_resolver.resolve('invalid.@!#$%^&$@.hostname', make_callback())
-    dns_resolver.resolve('toooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'long.hostname', make_callback())
-    dns_resolver.resolve('toooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
-                         'long.hostname', make_callback())
+    dns_resolver.resolve(
+        'toooooooooooooooooooooooooooooooooooooooooooooooooo'
+        'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+        'long.hostname', make_callback())
+    dns_resolver.resolve(
+        'toooooooooooooooooooooooooooooooooooooooooooooooooo'
+        'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+        'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+        'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+        'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+        'ooooooooooooooooooooooooooooooooooooooooooooooooooo'
+        'long.hostname', make_callback())
 
     loop.run()
 
 
 if __name__ == '__main__':
     test()
-

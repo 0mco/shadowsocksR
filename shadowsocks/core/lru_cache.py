@@ -26,7 +26,7 @@ if __name__ == '__main__':
     import os, sys, inspect
     file_path = os.path.dirname(
         os.path.realpath(inspect.getfile(inspect.currentframe())))
-    sys.path.insert(0, os.path.join(file_path, '../'))
+    sys.path.insert(0, os.path.join(file_path, '../../'))
 
 from collections import OrderedDict
 

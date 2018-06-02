@@ -22,9 +22,8 @@ import sys
 import hashlib
 import logging
 
-from shadowsocks import common
+from shadowsocks.core import common
 from shadowsocks.crypto import rc4_md5, openssl, sodium, table
-
 
 method_supported = {}
 method_supported.update(rc4_md5.ciphers)
@@ -38,6 +37,7 @@ def random_string(length):
         return os.urandom(length)
     except NotImplementedError as e:
         return openssl.rand_bytes(length)
+
 
 cached_keys = {}
 
@@ -73,7 +73,7 @@ def EVP_BytesToKey(password, key_len, iv_len):
 
 
 class Encryptor(object):
-    def __init__(self, key, method, iv = None):
+    def __init__(self, key, method, iv=None):
         self.key = key
         self.method = method
         self.iv = None
@@ -86,8 +86,8 @@ class Encryptor(object):
         self._method_info = self.get_method_info(method)
         if self._method_info:
             if iv is None or len(iv) != self._method_info[1]:
-                self.cipher = self.get_cipher(key, method, 1,
-                                          random_string(self._method_info[1]))
+                self.cipher = self.get_cipher(
+                    key, method, 1, random_string(self._method_info[1]))
             else:
                 self.cipher = self.get_cipher(key, method, 1, iv)
         else:
@@ -130,7 +130,7 @@ class Encryptor(object):
     def decrypt(self, buf):
         if len(buf) == 0:
             return buf
-        if self.decipher is not None: #optimize
+        if self.decipher is not None:  #optimize
             return self.decipher.update(buf)
 
         decipher_iv_len = self._method_info[1]
@@ -138,13 +138,14 @@ class Encryptor(object):
             self.iv_buf += buf
         if len(self.iv_buf) > decipher_iv_len:
             decipher_iv = self.iv_buf[:decipher_iv_len]
-            self.decipher = self.get_cipher(self.key, self.method, 0,
-                                            iv=decipher_iv)
+            self.decipher = self.get_cipher(
+                self.key, self.method, 0, iv=decipher_iv)
             buf = self.iv_buf[decipher_iv_len:]
             del self.iv_buf
             return self.decipher.update(buf)
         else:
             return b''
+
 
 def encrypt_all(password, method, op, data):
     result = []
@@ -164,6 +165,7 @@ def encrypt_all(password, method, op, data):
     result.append(cipher.update(data))
     return b''.join(result)
 
+
 def encrypt_key(password, method):
     method = method.lower()
     (key_len, iv_len, m) = method_supported[method]
@@ -173,15 +175,18 @@ def encrypt_key(password, method):
         key = password
     return key
 
+
 def encrypt_iv_len(method):
     method = method.lower()
     (key_len, iv_len, m) = method_supported[method]
     return iv_len
 
+
 def encrypt_new_iv(method):
     method = method.lower()
     (key_len, iv_len, m) = method_supported[method]
     return random_string(iv_len)
+
 
 def encrypt_all_iv(key, method, op, data, ref_iv):
     result = []

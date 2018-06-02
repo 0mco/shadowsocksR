@@ -27,33 +27,39 @@ import base64
 import datetime
 import random
 
-from shadowsocks import common
+from shadowsocks.core import common
 from shadowsocks.obfsplugin import plain
-from shadowsocks.common import to_bytes, to_str, ord, chr
+from shadowsocks.core.common import to_bytes, to_str, ord, chr
+
 
 def create_http_simple_obfs(method):
     return http_simple(method)
 
+
 def create_http_post_obfs(method):
     return http_post(method)
+
 
 def create_random_head_obfs(method):
     return random_head(method)
 
+
 obfs_map = {
-        'http_simple': (create_http_simple_obfs,),
-        'http_simple_compatible': (create_http_simple_obfs,),
-        'http_post': (create_http_post_obfs,),
-        'http_post_compatible': (create_http_post_obfs,),
-        'random_head': (create_random_head_obfs,),
-        'random_head_compatible': (create_random_head_obfs,),
+    'http_simple': (create_http_simple_obfs, ),
+    'http_simple_compatible': (create_http_simple_obfs, ),
+    'http_post': (create_http_post_obfs, ),
+    'http_post_compatible': (create_http_post_obfs, ),
+    'random_head': (create_random_head_obfs, ),
+    'random_head_compatible': (create_random_head_obfs, ),
 }
+
 
 def match_begin(str1, str2):
     if len(str1) >= len(str2):
         if str1[:len(str2)] == str2:
             return True
     return False
+
 
 class http_simple(plain.plain):
     def __init__(self, method):
@@ -63,7 +69,8 @@ class http_simple(plain.plain):
         self.host = None
         self.port = 0
         self.recv_buffer = b''
-        self.user_agent = [b"Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0",
+        self.user_agent = [
+            b"Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0",
             b"Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/44.0",
             b"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36",
             b"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Ubuntu/11.10 Chromium/27.0.1453.93 Chrome/27.0.1453.93 Safari/537.36",
@@ -74,13 +81,14 @@ class http_simple(plain.plain):
             b"Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko",
             b"Mozilla/5.0 (Linux; Android 4.4; Nexus 5 Build/BuildID) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/30.0.0.0 Mobile Safari/537.36",
             b"Mozilla/5.0 (iPad; CPU OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3",
-            b"Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3"]
+            b"Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3"
+        ]
 
     def encode_head(self, buf):
         hexstr = binascii.hexlify(buf)
         chs = []
         for i in range(0, len(hexstr), 2):
-            chs.append(b"%" + hexstr[i:i+2])
+            chs.append(b"%" + hexstr[i:i + 2])
         return b''.join(chs)
 
     def client_encode(self, buf):
@@ -110,7 +118,8 @@ class http_simple(plain.plain):
         if body:
             http_head += body + "\r\n\r\n"
         else:
-            http_head += b"User-Agent: " + random.choice(self.user_agent) + b"\r\n"
+            http_head += b"User-Agent: " + random.choice(
+                self.user_agent) + b"\r\n"
             http_head += b"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.8\r\nAccept-Encoding: gzip, deflate\r\nDNT: 1\r\nConnection: keep-alive\r\n\r\n"
         self.has_sent_header = True
         return http_head + buf
@@ -130,7 +139,8 @@ class http_simple(plain.plain):
             return buf
 
         header = b'HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Encoding: gzip\r\nContent-Type: text/html\r\nDate: '
-        header += to_bytes(datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT'))
+        header += to_bytes(
+            datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT'))
         header += b'\r\nServer: nginx\r\nVary: Accept-Encoding\r\n\r\n'
         self.has_sent_header = True
         return header + buf
@@ -165,13 +175,13 @@ class http_simple(plain.plain):
         self.has_sent_header = True
         self.has_recv_header = True
         if self.method == 'http_simple':
-            return (b'E'*2048, False, False)
+            return (b'E' * 2048, False, False)
         return (buf, True, False)
 
     def error_return(self, buf):
         self.has_sent_header = True
         self.has_recv_header = True
-        return (b'E'*2048, False, False)
+        return (b'E' * 2048, False, False)
 
     def server_decode(self, buf):
         if self.has_recv_header:
@@ -185,7 +195,7 @@ class http_simple(plain.plain):
                     self.recv_buffer = None
                     logging.warn('http_simple: over size')
                     return self.not_match_return(buf)
-            else: #not http header, run on original protocol
+            else:  #not http header, run on original protocol
                 self.recv_buffer = None
                 logging.debug('http_simple: not match begin')
                 return self.not_match_return(buf)
@@ -214,12 +224,17 @@ class http_simple(plain.plain):
         else:
             return (b'', True, False)
 
+
 class http_post(http_simple):
     def __init__(self, method):
         super(http_post, self).__init__(method)
 
     def boundary(self):
-        return to_bytes(''.join([random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") for i in range(32)]))
+        return to_bytes(''.join([
+            random.choice(
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+            ) for i in range(32)
+        ]))
 
     def client_encode(self, buf):
         if self.has_sent_header:
@@ -247,9 +262,11 @@ class http_post(http_simple):
         if body:
             http_head += body + "\r\n\r\n"
         else:
-            http_head += b"User-Agent: " + random.choice(self.user_agent) + b"\r\n"
+            http_head += b"User-Agent: " + random.choice(
+                self.user_agent) + b"\r\n"
             http_head += b"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.8\r\nAccept-Encoding: gzip, deflate\r\n"
-            http_head += b"Content-Type: multipart/form-data; boundary=" + self.boundary() + b"\r\nDNT: 1\r\n"
+            http_head += b"Content-Type: multipart/form-data; boundary=" + self.boundary(
+            ) + b"\r\nDNT: 1\r\n"
             http_head += b"Connection: keep-alive\r\n\r\n"
         self.has_sent_header = True
         return http_head + buf
@@ -258,8 +275,9 @@ class http_post(http_simple):
         self.has_sent_header = True
         self.has_recv_header = True
         if self.method == 'http_post':
-            return (b'E'*2048, False, False)
+            return (b'E' * 2048, False, False)
         return (buf, True, False)
+
 
 class random_head(plain.plain):
     def __init__(self, method):
@@ -307,8 +325,7 @@ class random_head(plain.plain):
         if crc != 0xffffffff:
             self.has_sent_header = True
             if self.method == 'random_head':
-                return (b'E'*2048, False, False)
+                return (b'E' * 2048, False, False)
             return (buf, True, False)
         # (buffer_to_recv, is_need_decrypt, is_need_to_encode_and_send_back)
         return (b'', False, True)
-
