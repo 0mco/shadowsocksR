@@ -154,81 +154,9 @@ def get_config(is_local):
         ]
     try:
         optlist, args = getopt.getopt(sys.argv[1:], shortopts, longopts)
-        for key, value in optlist:
-            if key == '-c':
-                config_path = value
-            elif key in ('-h', '--help'):
-                print_help(is_local)
-                sys.exit(0)
-            elif key == '--version':
-                print_shadowsocks()
-                sys.exit(0)
-            else:
-                continue
+        parse_args()
 
-        if config_path is None:
-            config_path = find_config()
 
-        if config_path:
-            logging.debug('loading config from %s' % config_path)
-            with open(config_path, 'rb') as f:
-                try:
-                    config = parse_json_in_str(
-                        remove_comment(f.read().decode('utf8')))
-                except ValueError as e:
-                    logging.error('found an error in config.json: %s', str(e))
-                    sys.exit(1)
-
-        v_count = 0
-        for key, value in optlist:
-            if key == '-p':
-                config['server_port'] = int(value)
-            elif key == '-k':
-                config['password'] = to_bytes(value)
-            elif key == '-l':
-                config['local_port'] = int(value)
-            elif key == '-s':
-                config['server'] = to_str(value)
-            elif key == '-m':
-                config['method'] = to_str(value)
-            elif key == '-O':
-                config['protocol'] = to_str(value)
-            elif key == '-o':
-                config['obfs'] = to_str(value)
-            elif key == '-G':
-                config['protocol_param'] = to_str(value)
-            elif key == '-g':
-                config['obfs_param'] = to_str(value)
-            elif key == '-b':
-                config['local_address'] = to_str(value)
-            elif key == '-v':
-                v_count += 1
-                # '-vv' turns on more verbose mode
-                config['verbose'] = v_count
-            elif key == '-t':
-                config['timeout'] = int(value)
-            elif key == '--fast-open':
-                config['fast_open'] = True
-            elif key == '--workers':
-                config['workers'] = int(value)
-            elif key == '--manager-address':
-                config['manager_address'] = value
-            elif key == '--user':
-                config['user'] = to_str(value)
-            elif key == '--forbidden-ip':
-                config['forbidden_ip'] = to_str(value)
-
-            elif key == '-d':
-                config['daemon'] = to_str(value)
-            elif key == '--pid-file':
-                config['pid-file'] = to_str(value)
-            elif key == '--log-file':
-                config['log-file'] = to_str(value)
-            elif key == '-q':
-                v_count -= 1
-                config['verbose'] = v_count
-            else:
-                continue
         optlist_ = dict(optlist)
         if '-L' in optlist_ or '--link' in optlist_:
             if '-L' in optlist_:  # override config if ssr link is provided.
@@ -320,6 +248,125 @@ def get_config(is_local):
     check_config(config, is_local)
 
     return config
+
+
+def parse_args():
+    import argparse
+
+    parser = argparse.ArgumentParser(description='A fast tunnel proxy that helps you bypass firewalls.', usage='ssclient [OPTION]', epilog='Online help: <https://github.com/shadowsocks/shadowsocks>')
+    # TODO: add conflicts of -L with others.
+    parser.add_argument('-c', metavar='CONFIG', help='path to config file')
+    parser.add_argument('-s', metavar='SERVER_ADDR', help='server address')
+    parser.add_argument('-p', metavar='SERVER_PORT', help='server port', default='8388')
+    parser.add_argument('-b', metavar='LOCAL_ADDR', help='local address', default='127.0.0.1')
+    parser.add_argument('-l', metavar='LOCAL_PORT', help='local port', default='1080')
+    parser.add_argument('-k', metavar='PASSWORD', help='password')
+    parser.add_argument('-m', metavar='METHOD', help='encryption method', default='aes-256-cfb')
+    parser.add_argument('-O', metavar='PROTOCOL', help='protocol', default='http_simple')
+    parser.add_argument('-G', metavar='PROTOCOL_PARAM', help='protocol param', default='')
+    parser.add_argument('-o', metavar='OBFS', help='obfsplugin', default='http_simple')
+    parser.add_argument('-g', metavar='OBFS_PARAM', help='obfs param', default='')
+    parser.add_argument('-t', metavar='TIMEOUT', help='timeout in seconds', default=300)
+    parser.add_argument('--fast-open', action='store_true', help='use TCP_FAST_OPEN, requires Linux 3.7+')
+    parser.add_argument('-L', metavar='SSR-LINK', help='connect using ssr link')
+    parser.add_argument('-d', metavar='start/stop/restart', help='daemon mode', choices=['start', 'stop', 'reatsrt'], default='start')
+    parser.add_argument('--workers', metavar='WORKERS', default=1)
+    parser.add_argument('--pid-file', metavar='PID_FILE', help='pid file for daemon mode')
+    parser.add_argument('--log-file', metavar='LOG_FILE', help='log file daemon mode')
+    parser.add_argument('--user', metavar='USER', help='run as user')
+    parser.add_argument('-v', '-vv', action='count', help='verbose mode')
+    parser.add_argument('-q', '-qq', action='count', help='quiet mode')
+    parser.add_argument('--version', metavar='version', help='show version information')
+    args = parser.parse_args()
+    print('args loaded:')
+    print(args)
+    global verbose
+    global config
+    config = {}
+    global config_path
+    config_path = None
+    logging.basicConfig(
+        level=logging.INFO, format='%(levelname)-s: %(message)s')
+    if args.version:
+        print_shadowsocks()
+        sys.exit(0)
+
+    if args.c:
+        config_path = args.c
+    else:
+        config_path = find_config()
+    if config_path:
+        logging.debug('loading config from %s' % config_path)
+        with open(config_path, 'rb') as f:
+            try:
+                config = parse_json_in_str(
+                    remove_comment(f.read().decode('utf8')))
+            except ValueError as e:
+                logging.error('found an error in config.json: %s', str(e))
+                sys.exit(1)
+
+    if args.p:
+        config['server_port'] = int(args.p)
+    if args.k:
+        config['password'] = to_bytes(args.k)
+    if args.l:
+        config['local_port'] = int(args.l)
+    if args.s:
+        config['server'] = to_str(args.s)
+    if args.m:
+        config['method'] = to_str(args.m)
+    if args.O:
+        config['protocol'] = to_str(args.O)
+    if args.o:
+        config['obfs'] = to_str(args.o)
+    if args.G:
+        config['protocol_param'] = to_str(args.G)
+    if args.g:
+        config['obfs_param'] = to_str(args.g)
+    if args.b:
+        config['local_address'] = to_str(args.b)
+    if args.t:
+        config['timeout'] = int(args.t)
+    # FIXME:
+    # if key == '--fast-open':
+    #     config['fast_open'] = True
+    if args.workers:
+        config['workers'] = int(args.workers)
+    # FIXME:
+    # if key == '--manager-address':
+    #     config['manager_address'] = value
+    if args.user:
+        config['user'] = to_str(args.user)
+    # FIXME:
+    # if key == '--forbidden-ip':
+    #     config['forbidden_ip'] = to_str(value)
+    if args.d:
+        config['daemon'] = to_str(args.d)
+    # FIXME:
+    # if key == '--pid-file':
+    #     config['pid-file'] = to_str(value)
+    # FIXME:
+    # if key == '--log-file':
+    #     config['log-file'] = to_str(value)
+    config['verbose'] = args.v
+    if args.q:
+        config['verbose'] -= 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def print_help(is_local):
