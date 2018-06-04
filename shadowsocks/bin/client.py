@@ -33,7 +33,7 @@ def main():
     # fix py2exe
     if hasattr(sys, "frozen") and sys.frozen in \
             ("windows_exe", "console_exe"):
-        p = os.path.dirname(os.path.abspath(sys.executable))
+        p = os.path.dirname(os.path.realpath(sys.executable))
         os.chdir(p)
 
     client = service.Client()

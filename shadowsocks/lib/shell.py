@@ -77,10 +77,10 @@ def log_shadowsocks_version():
 
 
 def find_config(cmd_mode=False):
-    file_dir = os.path.dirname(os.path.abspath(__file__))
+    file_dir = os.path.dirname(os.path.realpath(__file__))
     if cmd_mode:
 
-        return os.path.abspath(os.path.join(file_dir, '../config/client_config.json'))
+        return os.path.realpath(os.path.join(file_dir, '../config/client_config.json'))
     else:
         user_config_path = 'user-config.json'
         config_path = 'config.json'
@@ -88,7 +88,7 @@ def find_config(cmd_mode=False):
         def sub_find(file_name):
             if os.path.exists(file_name):
                 return file_name
-            file_name = os.path.join(os.path.abspath('..'), file_name)
+            file_name = os.path.join(os.path.realpath('..'), file_name)
             return file_name if os.path.exists(file_name) else None
 
         return sub_find(user_config_path) or sub_find(config_path)
