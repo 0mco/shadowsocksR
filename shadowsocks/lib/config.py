@@ -11,6 +11,17 @@ import os
 _key_sep = '/'          # seperator for recurive key, e.g. masterkey/subkey/subsubkey/...
 
 
+def load_before_read(func):
+    """load config from file every read operation to make sure everything is up-to-date (though it cannot really ensure that)."""
+    # FIXME: read/write safe when multi-processing
+    def decorated(self, *args, **kwargs):
+        self.read()
+        result = func(*args, **kwargs)
+        return result
+
+    return decorated
+
+
 def save_on_change(func):
     def decorated(self, *args, **kwargs):
         result = func(self, *args, **kwargs)
@@ -89,6 +100,11 @@ class BaseConfigManager:
         else:
             return self.__pool[real_path]
 
+    def read(self):
+        """read config from file."""
+        with open(self.config_path) as f:
+            self.config = json.load(f)
+
     def save(self, config_path=None):
         if config_path is None:
             config_path = self.config_path
@@ -101,6 +117,7 @@ class BaseConfigManager:
         self.init()
 
     @save_on_change
+    @load_before_read
     def create(self, key, value):
         """direct update whole self.config[key]."""
         keys = key.split(_key_sep)
@@ -111,6 +128,7 @@ class BaseConfigManager:
         self.create(key, value)
 
     @save_on_change
+    @load_before_read
     def add(self, key, value):
         """this method is for when self.config[key] is a container."""
         container = expand_key(self.config, key)
@@ -124,6 +142,7 @@ class BaseConfigManager:
             raise Exception('unknown container type ' + type(container))
 
     @save_on_change
+    @read_before_read
     def union(self, key, value):
         container = expand_key(self.config, key)
         if isinstance(container, list):
@@ -135,6 +154,7 @@ class BaseConfigManager:
         else:
             raise Exception('unknown container type ' + type(container))
 
+    @read_before_read
     def get(self, key, value_=None):
         """return value with key or the default value if no such key."""
         try:
@@ -145,6 +165,7 @@ class BaseConfigManager:
         return value
 
     @save_on_change
+    @read_before_read
     def remove(self, key, value=Indicator):
         """if value is set to Indicator, then del self.config[key],
         else delete value in self.config[key]."""
