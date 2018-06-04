@@ -24,16 +24,17 @@ class ClientNetwork(Network):
         self.udp_server = None
         self.dns_resolver = None
         self.loop = None
-        if config is not None:
-            self.config(config)
-
-    def config(self, config):
-        self.config = config
+        self.config = None
+        self.loop = eventloop.EventLoop()
         self.dns_resolver = asyncdns.DNSResolver()
+        self.dns_resolver.add_to_loop(self.loop)
+        if config is not None:
+            self.init(config)
+
+    def init(self, config):
+        self.config = config
         self.tcp_server = tcprelay.TCPRelay(config, self.dns_resolver, True)
         self.udp_server = udprelay.UDPRelay(config, self.dns_resolver, True)
-        self.loop = eventloop.EventLoop()
-        self.dns_resolver.add_to_loop(self.loop)
         self.tcp_server.add_to_loop(self.loop)
         self.udp_server.add_to_loop(self.loop)
 
@@ -67,40 +68,44 @@ class ClientNetwork(Network):
             signal.signal(signal.SIGUSR1, self.manager)
             signal.signal(signal.SIGUSR2, self.manager)
             threading.Thread(target=self.loop.run).start()
+            # test use, test connection pause/resume/close
             # while True:
             #     time.sleep(5)
             #     os.kill(os.getpid(), signal.SIGUSR1)
             #     time.sleep(20)
             #     os.kill(os.getpid(), signal.SIGUSR2)
             #     time.sleep(40)
-            print('all done')
+            # print('all done')
 
-            # loop.run()
         except Exception as e:
             shell.print_exception(e)
             sys.exit(1)
 
-    def stop(self):
+    def stop(self):        # TODO: use only one single to toggle pause/resume
+        """close tcp_server, udp_server."""
         os.kill(os.getpid(), signal.SIGUSR1)
 
-    def resume(self):
+    def restart(self):
         os.kill(os.getpid(), signal.SIGUSR2)
+
+    def switch(self, config):
+        self.stop()
+        self.init(config)
+        self.restart()
+        pass
 
     def manager(self, signum, frame):
         # TODO: SIGUSR1 to toggle loop status, for saving limited SIGUSR numbers.
+        # SIGUSR1 is for client to updat config, SIGUSR2 is for network to switch connection.
         if signum == signal.SIGUSR1:        # pause eventloop.
             self.loop.pause()
-            self.tcp_server.close()
+            self.tcp_server.close()       # test use, just pause, not stop
             self.udp_server.close()
+
         elif signum == signal.SIGUSR2:        # rersume eventloop.
             self.loop.resume()
-            self.tcp_server = tcprelay.TCPRelay(self.config, self.dns_resolver, True)
-            self.udp_server = udprelay.UDPRelay(self.config, self.dns_resolver, True)
-            self.tcp_server.add_to_loop(self.loop)
-            self.udp_server.add_to_loop(self.loop)
         elif signum == signal.SIGQUIT or signum == signal.SIGTERM:
             logging.warn('received SIGQUIT, doing graceful shutting down..')
-            self.tcp_server.close(next_tick=True)
-            self.udp_server.close(next_tick=True)
+            self.stop()
         elif signum == signal.SIGINT:
             sys.exit(1)
