@@ -66,10 +66,9 @@ class BaseConfigManager:
         self.config_path = None
         if config_path is not None:
             self.load(config_path)
-        self.init(*args, **kwargs)
 
     def init(self, *args, **kwargs):
-        """override by subclasses."""
+        """init when config file not exists, override by subclasses."""
         pass
 
     def load(self, config_path):
@@ -80,6 +79,7 @@ class BaseConfigManager:
         if real_path not in self.__pool:
             if not os.path.exists(real_path):   # if no such file, create it
                 open(real_path, 'w')
+                self.init()
                 self.save()
             else:
                 with open(real_path, 'r') as f:
@@ -89,8 +89,8 @@ class BaseConfigManager:
         else:
             return self.__pool[real_path]
 
-    def save(self, path=None):
-        if path is None:
+    def save(self, config_path=None):
+        if config_path is None:
             config_path = self.config_path
         assert self.config is not None
         with open(config_path, 'w+') as f:
@@ -99,7 +99,6 @@ class BaseConfigManager:
     def clear(self):
         """initialize" config."""
         self.init()
-        self.save()
 
     @save_on_change
     def create(self, key, value):
@@ -142,6 +141,7 @@ class BaseConfigManager:
             value = expand_key(self.config, key)
         except Exception:
             value = value_          # set to default value
+            raise
         return value
 
     @save_on_change
@@ -170,13 +170,15 @@ class ClientConfigManager(BaseConfigManager):
     def init(self, *args, **kwargs):
         self._hold = True
 
+        self.config = {}
         self.create('servers', [])      # TODO: priority queue
         self.create('subscriptions', {'auto_update': 1, 'list': []})
         self.create('auto_switch', 1)
 
         self._hold = False
+        print('init', self.config)
 
-    def get_server(self):
+    def get_server(self):           # FIXME: it seems that get_server will reset config.
         return list(self.get('servers', []))
 
     def add_server(self, ssr_addrs):
