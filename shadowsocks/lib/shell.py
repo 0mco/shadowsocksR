@@ -22,6 +22,7 @@ import os
 import json
 import sys
 import getopt
+import argparse
 import logging
 from shadowsocks.core.common import to_bytes, to_str, IPNetwork, PortRange
 from shadowsocks.core import encrypt
@@ -75,17 +76,22 @@ def log_shadowsocks_version():
     logging.info('ShadowsocksR %s' % __version())
 
 
-def find_config():
-    user_config_path = 'user-config.json'
-    config_path = 'config.json'
+def find_config(cmd_mode=False):
+    file_dir = os.path.dirname(os.path.abspath(__file__))
+    if cmd_mode:
 
-    def sub_find(file_name):
-        if os.path.exists(file_name):
-            return file_name
-        file_name = os.path.join(os.path.abspath('..'), file_name)
-        return file_name if os.path.exists(file_name) else None
+        return os.path.abspath(os.path.join(file_dir, '../config/client_config.json'))
+    else:
+        user_config_path = 'user-config.json'
+        config_path = 'config.json'
 
-    return sub_find(user_config_path) or sub_find(config_path)
+        def sub_find(file_name):
+            if os.path.exists(file_name):
+                return file_name
+            file_name = os.path.join(os.path.abspath('..'), file_name)
+            return file_name if os.path.exists(file_name) else None
+
+        return sub_find(user_config_path) or sub_find(config_path)
 
 
 def check_config(config, is_local):
@@ -134,10 +140,12 @@ def check_config(config, is_local):
     encrypt.try_cipher(config['password'], config['method'])
 
 
-def get_config(is_local):
+def parse_config(is_local):
     global verbose
-    config = {}
-    config_path = None
+    global config
+    global config_path
+    # config = {}
+    # config_path = None
     logging.basicConfig(
         level=logging.INFO, format='%(levelname)-s: %(message)s')
     if is_local:  # check this is a client or a server.
@@ -155,16 +163,6 @@ def get_config(is_local):
     try:
         optlist, args = getopt.getopt(sys.argv[1:], shortopts, longopts)
         parse_args()
-
-
-        optlist_ = dict(optlist)
-        if '-L' in optlist_ or '--link' in optlist_:
-            if '-L' in optlist_:  # override config if ssr link is provided.
-                config_from_ssrlink = decode_ssrlink(optlist_.get('-L'))
-            else:
-                config_from_ssrlink = decode_ssrlink(optlist_.get('--link'))
-            print(config_from_ssrlink)
-            config.update(config_from_ssrlink)
 
     except getopt.GetoptError as e:
         print(e, file=sys.stderr)
@@ -251,10 +249,16 @@ def get_config(is_local):
 
 
 def parse_args():
-    import argparse
+    # FIXME: called twice, service, parse_config
+    def args_error(message):        # TODO: print help information when invalid arguments
+        nonlocal parser
+        sys.stderr.write('error: %s\n'.format(message))
+        print('something wrong')
+        parser.print_help()
 
-    parser = argparse.ArgumentParser(description='A fast tunnel proxy that helps you bypass firewalls.', usage='ssclient [OPTION]', epilog='Online help: <https://github.com/shadowsocks/shadowsocks>')
+    parser = argparse.ArgumentParser(description='A fast tunnel proxy that helps you bypass firewalls.', usage='ssclient command [OPTION]', epilog='Online help: <https://github.com/shadowsocks/shadowsocks>')
     # TODO: add conflicts of -L with others.
+    # default to old version config path, if args.command is set, change it to new version config path
     parser.add_argument('-c', metavar='CONFIG', help='path to config file')
     parser.add_argument('-s', metavar='SERVER_ADDR', help='server address')
     parser.add_argument('-p', metavar='SERVER_PORT', help='server port', default='8388')
@@ -266,20 +270,47 @@ def parse_args():
     parser.add_argument('-G', metavar='PROTOCOL_PARAM', help='protocol param', default='')
     parser.add_argument('-o', metavar='OBFS', help='obfsplugin', default='http_simple')
     parser.add_argument('-g', metavar='OBFS_PARAM', help='obfs param', default='')
+    parser.add_argument('-L', metavar='SSR_LINK', help='connect using ssr link')
     parser.add_argument('-t', metavar='TIMEOUT', help='timeout in seconds', default=300)
     parser.add_argument('--fast-open', action='store_true', help='use TCP_FAST_OPEN, requires Linux 3.7+')
-    parser.add_argument('-L', metavar='SSR-LINK', help='connect using ssr link')
-    parser.add_argument('-d', metavar='start/stop/restart', help='daemon mode', choices=['start', 'stop', 'reatsrt'], default='start')
-    parser.add_argument('--workers', metavar='WORKERS', default=1)
+    parser.add_argument('-d', metavar='', help='daemon mode (start/stop/restart)', choices=['start', 'stop', 'restart'])
     parser.add_argument('--pid-file', metavar='PID_FILE', help='pid file for daemon mode')
     parser.add_argument('--log-file', metavar='LOG_FILE', help='log file daemon mode')
     parser.add_argument('--user', metavar='USER', help='run as user')
-    parser.add_argument('-v', '-vv', action='count', help='verbose mode')
+    parser.add_argument('--workers', metavar='WORKERS', default=1)
+    parser.add_argument('-v', '-vv', action='count', help='verbose mode', default=0)
     parser.add_argument('-q', '-qq', action='count', help='quiet mode')
     parser.add_argument('--version', metavar='version', help='show version information')
+
+    subparsers = parser.add_subparsers(dest='command', help='sub-commands')
+    server_parser = subparsers.add_parser('server', help='xxx')
+    feed_parser = subparsers.add_parser('feed', help='yyy')
+    status_parser = subparsers.add_parser('status', help='show current status')
+    server_parser.add_argument('subcmd', help='add server')
+    feed_parser.add_argument('subcmd', help='add server')
+    status_parser.add_argument('subcmd', help='show current status')
+
     args = parser.parse_args()
-    print('args loaded:')
-    print(args)
+    if args.command:
+        if args.command == 'feed':
+            if args.subcmd == 'update':
+                print('updating subscriptions')
+            if args.subcmd == 'add':
+                print('add feed here')
+            if args.subcmd == 'remove':
+                print('remove list here')
+            if args.subcmd == 'list':
+                print('showing list here')
+        elif args.command == 'server':
+            if args.subcmd == 'add':
+                print('add server here')
+            if args.subcmd == 'remove':
+                print('remove server here')
+            if args.subcmd == 'list':
+                print('showing list here')
+        elif args.command == 'status':          # NOTE: modify choices option in subparsers to accordinate with valid commands here.
+            print('showing status here')
+
     global verbose
     global config
     config = {}
@@ -292,18 +323,29 @@ def parse_args():
         sys.exit(0)
 
     if args.c:
-        config_path = args.c
-    else:
-        config_path = find_config()
+        # FIXME: enable default config_path
+        if args.command:
+            # if args.c == 'default':
+            #     config_path = find_config(True)
+            # else:
+            config_path = args.c
+        else:
+            # if args.c == 'default':
+            #     config_path = find_config(False)
+            # else:
+            config_path = args.c
+            logging.debug('loading config from %s' % config_path)
+            with open(config_path, 'rb') as f:
+                try:
+                    config = parse_json_in_str(
+                        remove_comment(f.read().decode('utf8')))
+                except ValueError as e:
+                    logging.error('found an error in config.json: %s', str(e))
+                    sys.exit(1)
     if config_path:
-        logging.debug('loading config from %s' % config_path)
-        with open(config_path, 'rb') as f:
-            try:
-                config = parse_json_in_str(
-                    remove_comment(f.read().decode('utf8')))
-            except ValueError as e:
-                logging.error('found an error in config.json: %s', str(e))
-                sys.exit(1)
+        config['config_path'] = config_path
+    else:
+        config['config_path'] = find_config(args.command)
 
     if args.p:
         config['server_port'] = int(args.p)
@@ -351,22 +393,12 @@ def parse_args():
     config['verbose'] = args.v
     if args.q:
         config['verbose'] -= 1
+    if args.L:
+        config_from_ssrlink = decode_ssrlink(args.L)
+        print(config_from_ssrlink)
+        config.update(config_from_ssrlink)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return args
 
 
 def print_help(is_local):
