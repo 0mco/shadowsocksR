@@ -45,7 +45,6 @@ class ClientNetwork(Network):
         if not config.get('dns_ipv6', False):
             asyncdns.IPV6_CONNECTION_SUPPORT = False
 
-        daemon.daemon_exec(config)          # TODO: move daemon to service
         logging.info(
             "local start with protocol [%s] password [%s] method [%s] obfs [%s] obfs_param [%s]"
             % (config['protocol'], config['password'], config['method'],
@@ -73,7 +72,7 @@ class ClientNetwork(Network):
             #     time.sleep(5)
             #     os.kill(os.getpid(), signal.SIGUSR1)
             #     time.sleep(20)
-            #     os.kill(os.getpid(), signal.SIGUSR2)
+            #     os.kill(os.getpid(), signal.SIGUSR1)
             #     time.sleep(40)
             # print('all done')
 
@@ -83,7 +82,7 @@ class ClientNetwork(Network):
 
     def stop(self):        # TODO: use only one single to toggle pause/resume
         """close tcp_server, udp_server."""
-        os.kill(os.getpid(), signal.SIGUSR1)
+        os.kill(os.getpid(), signal.SIGUSR2)
 
     def restart(self):
         os.kill(os.getpid(), signal.SIGUSR2)
@@ -97,13 +96,13 @@ class ClientNetwork(Network):
     def manager(self, signum, frame):
         # TODO: SIGUSR1 to toggle loop status, for saving limited SIGUSR numbers.
         # SIGUSR1 is for client to updat config, SIGUSR2 is for network to switch connection.
-        if signum == signal.SIGUSR1:        # pause eventloop.
-            self.loop.pause()
-            self.tcp_server.close()       # test use, just pause, not stop
-            self.udp_server.close()
-
-        elif signum == signal.SIGUSR2:        # rersume eventloop.
-            self.loop.resume()
+        if signum == signal.SIGUSR2:        # pause eventloop.
+            if self.loop.is_paused():
+                self.loop.resume()
+            else:
+                self.loop.pause()
+                self.tcp_server.close()       # test use, just pause, not stop
+                self.udp_server.close()
         elif signum == signal.SIGQUIT or signum == signal.SIGTERM:
             logging.warn('received SIGQUIT, doing graceful shutting down..')
             self.stop()
