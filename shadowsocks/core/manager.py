@@ -208,7 +208,8 @@ def test():
     eventloop.TIMEOUT_PRECISION = 1
 
     def run_server():
-        config = shell.get_config(True)
+        shell.parse_args()
+        config = shell.parse_config(True)
         config = config.copy()
         a_config = {
             'server': '127.0.0.1',

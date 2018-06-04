@@ -26,9 +26,7 @@ import logging
 
 if __name__ == '__main__':
     import sys
-    import inspect
-    file_path = os.path.dirname(
-        os.path.realpath(inspect.getfile(inspect.currentframe())))
+    file_path = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.join(file_path, '../../'))
 
 from shadowsocks.core import common, lru_cache, eventloop
@@ -84,11 +82,11 @@ def detect_ipv6_supprot():
         try:
             s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
             s.connect(('::1', 0))
-            print('IPv6 support')
+            # print('IPv6 support')
             return True
         except:
             pass
-    print('IPv6 not support')
+    # print('IPv6 not support')
     return False
 
 
