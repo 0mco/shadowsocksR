@@ -24,20 +24,20 @@ import logging
 import signal
 
 if __name__ == '__main__':
-    import inspect
-    file_path = os.path.dirname(
-        os.path.realpath(inspect.getfile(inspect.currentframe())))
+    file_path = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.join(file_path, '../../'))
 
-from shadowsocks.core import daemon, eventloop, tcprelay, udprelay, \
+from shadowsocks.core import eventloop, tcprelay, udprelay, \
     asyncdns, common, manager
-from shadowsocks import shell
+from shadowsocks import daemon
+from shadowsocks.lib import shell
 
 
 def main():
     shell.check_python()
 
-    config = shell.get_config(False)
+    shell.parse_args()
+    config = shell.parse_config(False)
 
     shell.log_shadowsocks_version()
 
