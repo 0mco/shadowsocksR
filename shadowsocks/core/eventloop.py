@@ -204,6 +204,9 @@ class EventLoop(object):
     def stop(self):
         self._stopping = True
 
+    def is_paused(self):
+        return self._paused
+
     def run(self):
         events = []
         while True:
