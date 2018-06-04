@@ -160,6 +160,7 @@ class EventLoop(object):
         self._last_time = time.time()
         self._periodic_callbacks = []
         self._stopping = False
+        self._paused = False            # indicate really stop or just pause when self._stopping is set.
         logging.debug('using event model: %s', model)
 
     def poll(self, timeout=None):
@@ -190,44 +191,59 @@ class EventLoop(object):
         fd = f.fileno()
         self._impl.modify(fd, mode)
 
+    def pause(self):
+        logging.debug('pausing eventloop')
+        self._paused = True
+        self._stopping = True
+
+    def resume(self):
+        logging.debug('resuming eventloop')
+        self._paused = False
+        self._stopping = False
+
     def stop(self):
         self._stopping = True
 
     def run(self):
         events = []
-        while not self._stopping:
-            asap = False
-            try:
-                events = self.poll(TIMEOUT_PRECISION)
-            except (OSError, IOError) as e:
-                if errno_from_exception(e) in (errno.EPIPE, errno.EINTR):
-                    # EPIPE: Happens when the client closes the connection
-                    # EINTR: Happens when received a signal
-                    # handles them as soon as possible
-                    asap = True
-                    logging.debug('poll:%s', e)
-                else:
-                    logging.error('poll:%s', e)
-                    import traceback
-                    traceback.print_exc()
-                    continue
+        while True:
+            while not self._stopping:
+                asap = False
+                try:
+                    events = self.poll(TIMEOUT_PRECISION)
+                except (OSError, IOError) as e:
+                    if errno_from_exception(e) in (errno.EPIPE, errno.EINTR):
+                        # EPIPE: Happens when the client closes the connection
+                        # EINTR: Happens when received a signal
+                        # handles them as soon as possible
+                        asap = True
+                        logging.debug('poll:%s', e)
+                    else:
+                        logging.error('poll:%s', e)
+                        import traceback
+                        traceback.print_exc()
+                        continue
 
-            handle = False
-            for sock, fd, event in events:
-                handler = self._fdmap.get(fd, None)
-                if handler is not None:
-                    handler = handler[1]
-                    try:
-                        handle = handler.handle_event(sock, fd, event) or handle
-                    except (OSError, IOError) as e:
-                        shell.print_exception(e)
-            now = time.time()
-            if asap or now - self._last_time >= TIMEOUT_PRECISION:
-                for callback in self._periodic_callbacks:
-                    callback()
-                self._last_time = now
-            if events and not handle:
-                time.sleep(0.001)
+                handle = False
+                for sock, fd, event in events:
+                    handler = self._fdmap.get(fd, None)
+                    if handler is not None:
+                        handler = handler[1]
+                        try:
+                            handle = handler.handle_event(sock, fd, event) or handle
+                        except (OSError, IOError) as e:
+                            shell.print_exception(e)
+                now = time.time()
+                if asap or now - self._last_time >= TIMEOUT_PRECISION:
+                    for callback in self._periodic_callbacks:
+                        callback()
+                    self._last_time = now
+                if events and not handle:
+                    time.sleep(0.001)
+            if not self._paused:        # really stop it, not just paused.
+                break
+            time.sleep(0.1)
+        logging.debug('loop exited')
 
     def __del__(self):
         self._impl.close()
