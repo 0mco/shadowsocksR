@@ -19,7 +19,7 @@ import pickle
 import logging
 
 
-def feed_ssr(url):
+def fetch_ssr(url):
     """Retrive ssr links form url, return a list."""
     # TODO: sometimes we need to try to get via a proxy.
     base64_ssr = requests.get(url).text
@@ -27,7 +27,7 @@ def feed_ssr(url):
     # The last one should be empty string.
     # Of course we can handle more correctly.
     # But as for now, it just works.
-    return [link for link in ssrlinks if ssrlink.is_valide_ssrlink(link)]
+    return [link.strip() for link in ssrlinks if ssrlink.is_valide_ssrlink(link)]
 
 
 def load_servers():
@@ -38,7 +38,7 @@ def load_servers():
 
 def update_servers(url):
     try:
-        ssrlinks = feed_ssr(url)
+        ssrlinks = fetch_ssr(url)
         with open('ssr.pickle', 'w') as f:
             pickle.dump(ssrlinks, f)
     except Exception as e:
@@ -48,4 +48,4 @@ def update_servers(url):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) == 2:
-        print(feed_ssr(sys.argv[1]))
+        print(fetch_ssr(sys.argv[1]))
