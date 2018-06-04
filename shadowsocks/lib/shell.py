@@ -140,7 +140,7 @@ def check_config(config, is_local):
     encrypt.try_cipher(config['password'], config['method'])
 
 
-def parse_config(is_local):
+def parse_config(is_local, config_=None):
     global verbose
     global config
     global config_path
@@ -160,19 +160,10 @@ def parse_config(is_local):
             'help', 'fast-open', 'pid-file=', 'log-file=', 'workers=',
             'forbidden-ip=', 'user=', 'manager-address=', 'version'
         ]
-    try:
-        optlist, args = getopt.getopt(sys.argv[1:], shortopts, longopts)
-        parse_args()
-
-    except getopt.GetoptError as e:
-        print(e, file=sys.stderr)
-        print_help(is_local)
-        sys.exit(2)
-
-    if not config:
-        logging.error('config not specified')
-        print_help(is_local)
-        sys.exit(2)
+    if config_:
+        config.update(config_)
+    else:
+        args = parse_args()
 
     config['password'] = to_bytes(config.get('password', b''))
     config['method'] = to_str(config.get('method', 'aes-256-cfb'))
@@ -196,6 +187,8 @@ def parse_config(is_local):
     config['local_address'] = to_str(config.get('local_address', '127.0.0.1'))
     config['local_port'] = config.get('local_port', 1080)
     if is_local:
+        # FIXME: enable not provide server addr if daemon stop or restart
+        # if config.get('server', None) is None and not args.command and (not args.d or args.d == 'starat'):
         if config.get('server', None) is None:
             logging.error('server addr not specified')
             print_local_help()
@@ -248,7 +241,7 @@ def parse_config(is_local):
     return config
 
 
-def parse_args():
+def parse_args(args_=None):
     # FIXME: called twice, service, parse_config
     def args_error(message):        # TODO: print help information when invalid arguments
         nonlocal parser
@@ -286,30 +279,17 @@ def parse_args():
     server_parser = subparsers.add_parser('server', help='xxx')
     feed_parser = subparsers.add_parser('feed', help='yyy')
     status_parser = subparsers.add_parser('status', help='show current status')
-    server_parser.add_argument('subcmd', help='add server')
-    feed_parser.add_argument('subcmd', help='add server')
+
+    server_parser.add_argument('subcmd', help='server command')
+    feed_parser.add_argument('--link', help='ssr link')     # TODO: if no link, ask later.
+    feed_parser.add_argument('subcmd', help='subscription command')
+    feed_parser.add_argument('--source', help='souurce address')
     status_parser.add_argument('subcmd', help='show current status')
 
-    args = parser.parse_args()
-    if args.command:
-        if args.command == 'feed':
-            if args.subcmd == 'update':
-                print('updating subscriptions')
-            if args.subcmd == 'add':
-                print('add feed here')
-            if args.subcmd == 'remove':
-                print('remove list here')
-            if args.subcmd == 'list':
-                print('showing list here')
-        elif args.command == 'server':
-            if args.subcmd == 'add':
-                print('add server here')
-            if args.subcmd == 'remove':
-                print('remove server here')
-            if args.subcmd == 'list':
-                print('showing list here')
-        elif args.command == 'status':          # NOTE: modify choices option in subparsers to accordinate with valid commands here.
-            print('showing status here')
+    if args_:
+        args = parser.parse_args(args_)
+    else:
+        args = parser.parse_args()
 
     global verbose
     global config
@@ -395,7 +375,6 @@ def parse_args():
         config['verbose'] -= 1
     if args.L:
         config_from_ssrlink = decode_ssrlink(args.L)
-        print(config_from_ssrlink)
         config.update(config_from_ssrlink)
 
     return args
