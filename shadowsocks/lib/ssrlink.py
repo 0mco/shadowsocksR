@@ -16,16 +16,8 @@ def base64_decode(string):
             string += '=' * (4 - missing_padding)
         return string
 
-    _string = string
     string = adjust_padding(string.strip())
-    try:
-        result = common.to_str(
-            base64.urlsafe_b64decode(common.to_bytes(string)))
-    except Exception:
-        print('decoding string:', _string, 'length:', len(_string))
-        print('adjusted string:', string, 'length:', len(string))
-        raise
-    return result
+    return common.to_str(base64.urlsafe_b64decode(common.to_bytes(string)))
 
 
 def decode_ssrlink(link):
