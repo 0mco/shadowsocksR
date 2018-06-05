@@ -61,7 +61,7 @@ def __version():
         version_str = pkg_resources.get_distribution('shadowsocks').version
     except Exception:
         try:
-            from shadowsocks import version
+            from shadowsocks.lib import version
             version_str = version.version()
         except Exception:
             pass
@@ -191,12 +191,15 @@ def parse_config(is_local, config_=None):
     if is_local:
         # FIXME: enable not provide server addr if daemon stop or restart
         # if config.get('server', None) is None and not args.command and (not args.d or args.d == 'starat'):
-        if config.get('server', None) is None:
-            logging.error('server addr not specified')
-            print_local_help()
-            sys.exit(2)
-        else:
+        # if config.get('server', None) is None:
+        #     logging.error('server addr not specified')
+        #     print_local_help()
+        #     sys.exit(2)
+        # else:
+        #     config['server'] = to_str(config['server'])
+        if 'server' in config:
             config['server'] = to_str(config['server'])
+
     else:
         config['server'] = to_str(config.get('server', '0.0.0.0'))
         try:
