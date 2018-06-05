@@ -6,6 +6,7 @@ Python module documentation.
 
 import json
 import os
+import sys
 
 
 _key_sep = '/'          # seperator for recurive key, e.g. masterkey/subkey/subsubkey/...
@@ -15,8 +16,9 @@ def load_before_read(func):
     """load config from file every read operation to make sure everything is up-to-date (though it cannot really ensure that)."""
     # FIXME: read/write safe when multi-processing
     def decorated(self, *args, **kwargs):
-        self.read()
-        result = func(*args, **kwargs)
+        if self._hold is False:
+            self.read()
+        result = func(self, *args, **kwargs)
         return result
 
     return decorated
@@ -94,7 +96,16 @@ class BaseConfigManager:
                 self.save()
             else:
                 with open(real_path, 'r') as f:
-                    self.config = json.load(f)
+                    try:
+                        self.config = json.load(f)
+                    except json.decoder.JSONDecodeError as e:
+                        # TODO: print file content here
+                        print(e)
+                        choice = input("do you want to init config file? (yes/no)")
+                        if choice.lower() == 'yes':
+                            self.init()
+                        else:
+                            sys.exit(1)
             self.__pool[real_path] = self
             return self
         else:
@@ -142,7 +153,7 @@ class BaseConfigManager:
             raise Exception('unknown container type ' + type(container))
 
     @save_on_change
-    @read_before_read
+    @load_before_read
     def union(self, key, value):
         container = expand_key(self.config, key)
         if isinstance(container, list):
@@ -154,7 +165,7 @@ class BaseConfigManager:
         else:
             raise Exception('unknown container type ' + type(container))
 
-    @read_before_read
+    @load_before_read
     def get(self, key, value_=None):
         """return value with key or the default value if no such key."""
         try:
@@ -165,7 +176,7 @@ class BaseConfigManager:
         return value
 
     @save_on_change
-    @read_before_read
+    @load_before_read
     def remove(self, key, value=Indicator):
         """if value is set to Indicator, then del self.config[key],
         else delete value in self.config[key]."""
@@ -195,6 +206,7 @@ class ClientConfigManager(BaseConfigManager):
         self.create('servers', [])      # TODO: priority queue
         self.create('subscriptions', {'auto_update': 1, 'list': []})
         self.create('auto_switch', 1)
+        self.create('auto_start', 0)
 
         self._hold = False
         print('init', self.config)
@@ -207,6 +219,10 @@ class ClientConfigManager(BaseConfigManager):
             self.add('servers', ssr_addrs)
         else:                               # if ssr_addrs is a container
             self.union('servers', ssr_addrs)
+
+    def update_server_list(self, ssr_list):
+        assert type(ssr_list) is list
+        self.create('servers', ssr_list)
 
     def get_subscription(self):
         return list(self.get('subscriptions/list'))
