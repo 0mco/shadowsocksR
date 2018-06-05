@@ -14,7 +14,8 @@ if __name__ == '__main__':
     sys.path.insert(0, os.path.join(file_path, '../'))
 
 from shadowsocks.lib import ssrlink
-import requests
+# import requests
+from urllib import request
 import pickle
 import logging
 
@@ -22,7 +23,16 @@ import logging
 def fetch_ssr(url):
     """Retrive ssr links form url, return a list."""
     # TODO: sometimes we need to try to get via a proxy.
-    base64_ssr = requests.get(url).text
+    # base64_ssr = requests.get(url).text
+
+    headers = {
+            'User-Agent': 'Mozilla/5.0',
+            }
+    req = request.Request(url, headers=headers)
+    base64_ssr = request.urlopen(req).read().decode('utf-8')
+
+
+
     ssrlinks = ssrlink.base64_decode(base64_ssr).split('\n')
     # The last one should be empty string.
     # Of course we can handle more correctly.
