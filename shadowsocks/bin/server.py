@@ -34,6 +34,7 @@ from shadowsocks.lib import shell
 
 def main():
     shell.check_python()
+    shell.check_config_path()
 
     shell.parse_args()
     config = shell.parse_config(False)
