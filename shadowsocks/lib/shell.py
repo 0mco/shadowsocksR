@@ -180,8 +180,10 @@ def parse_config(is_local, config_=None):
     config['udp_cache'] = int(config.get('udp_cache', 64))
     config['fast_open'] = config.get('fast_open', False)
     config['workers'] = config.get('workers', 1)
-    config['pid-file'] = config.get('pid-file', '/var/run/shadowsocksr.pid')
-    config['log-file'] = config.get('log-file', '/var/log/shadowsocksr.log')
+    # config['pid-file'] = config.get('pid-file', '/var/run/shadowsocksr.pid')
+    # config['log-file'] = config.get('log-file', '/var/log/shadowsocksr.log')
+    config['pid-file'] = config.get('pid-file', '/tmp/shadowsocksr.pid')
+    config['log-file'] = config.get('log-file', '/tmp/shadowsocksr.log')
     config['verbose'] = config.get('verbose', False)
     config['connect_verbose_info'] = config.get('connect_verbose_info', 0)
     config['local_address'] = to_str(config.get('local_address', '127.0.0.1'))
@@ -281,6 +283,7 @@ def parse_args(args_=None):
     status_parser = subparsers.add_parser('status', help='show current status')
 
     server_parser.add_argument('subcmd', help='server command')
+    server_parser.add_argument('-d', metavar='', help='daemon mode (start/stop/restart)', choices=['start', 'stop', 'restart'])
     feed_parser.add_argument('--link', help='ssr link')     # TODO: if no link, ask later.
     feed_parser.add_argument('subcmd', help='subscription command')
     feed_parser.add_argument('--source', help='souurce address')
