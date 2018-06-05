@@ -50,6 +50,16 @@ def is_valide_ssrlink(ssrlink):
     return ssrlink[:6] == 'ssr://'
 
 
+def is_duplicated(link1, link2):
+    ssr1 = decode_ssrlink(link1)
+    ssr2 = decode_ssrlink(link2)
+    # for config in ['server', 'server_port', 'password', 'protocol', 'method', 'obfs']:
+    for config in ['server', 'server_port']:            # the simple, the better
+        if ssr1[config] != ssr2[config]:
+            return False
+    return True
+
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) == 2:
