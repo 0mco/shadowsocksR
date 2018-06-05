@@ -12,6 +12,15 @@ import sys
 _key_sep = '/'          # seperator for recurive key, e.g. masterkey/subkey/subsubkey/...
 
 
+def check_config_path():
+    config_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '../config'))
+    if not os.path.exists(config_path):
+        os.makedirs(config_path)
+
+
+check_config_path()
+
+
 def load_before_read(func):
     """load config from file every read operation to make sure everything is up-to-date (though it cannot really ensure that)."""
     # FIXME: read/write safe when multi-processing
@@ -209,7 +218,8 @@ class ClientConfigManager(BaseConfigManager):
         self.create('auto_start', 0)
 
         self._hold = False
-        print('init', self.config)
+        print('Initializing...')
+        print(self.config)
 
     def get_server(self):           # FIXME: it seems that get_server will reset config.
         return list(self.get('servers', []))

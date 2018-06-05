@@ -46,16 +46,6 @@ def check_python():
         sys.exit(1)
 
 
-def check_config_path():
-    config_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '../config'))
-    print('config path:', config_path)
-    if not os.path.exists(config_path):
-        print('not exists')
-        os.makedirs(config_path)
-    else:
-        print('exists')
-
-
 def print_exception(e):
     global verbose
     logging.error(e)
