@@ -46,6 +46,16 @@ def check_python():
         sys.exit(1)
 
 
+def check_config_path():
+    config_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '../config'))
+    print('config path:', config_path)
+    if not os.path.exists(config_path):
+        print('not exists')
+        os.makedirs(config_path)
+    else:
+        print('exists')
+
+
 def print_exception(e):
     global verbose
     logging.error(e)
@@ -80,18 +90,21 @@ def find_config(cmd_mode=False):
     file_dir = os.path.dirname(os.path.realpath(__file__))
     if cmd_mode:
 
-        return os.path.realpath(os.path.join(file_dir, '../config/client_config.json'))
+        return os.path.realpath(
+            os.path.join(file_dir, '../config/client-config.json'))
     else:
-        user_config_path = 'user-config.json'
-        config_path = 'config.json'
-
-        def sub_find(file_name):
-            if os.path.exists(file_name):
-                return file_name
-            file_name = os.path.join(os.path.realpath('..'), file_name)
-            return file_name if os.path.exists(file_name) else None
-
-        return sub_find(user_config_path) or sub_find(config_path)
+        # user_config_path = 'user-config.json'
+        # config_path = 'config.json'
+        #
+        # def sub_find(file_name):
+        #     if os.path.exists(file_name):
+        #         return file_name
+        #     file_name = os.path.join(os.path.realpath('..'), file_name)
+        #     return file_name if os.path.exists(file_name) else None
+        #
+        # return sub_find(user_config_path) or sub_find(config_path)
+        return os.path.realpath(
+            os.path.join(file_dir, '../config/user-config.json'))
 
 
 def check_config(config, is_local):
@@ -248,49 +261,84 @@ def parse_config(is_local, config_=None):
 
 def parse_args(args_=None):
     # FIXME: called twice, service, parse_config
-    def args_error(message):        # TODO: print help information when invalid arguments
+    def args_error(
+            message):  # TODO: print help information when invalid arguments
         nonlocal parser
         sys.stderr.write('error: %s\n'.format(message))
         print('something wrong')
         parser.print_help()
 
-    parser = argparse.ArgumentParser(description='A fast tunnel proxy that helps you bypass firewalls.', usage='ssclient command [OPTION]', epilog='Online help: <https://github.com/shadowsocks/shadowsocks>')
+    parser = argparse.ArgumentParser(
+        description='A fast tunnel proxy that helps you bypass firewalls.',
+        usage='ssclient command [OPTION]',
+        epilog='Online help: <https://github.com/shadowsocks/shadowsocks>')
     # TODO: add conflicts of -L with others.
     # default to old version config path, if args.command is set, change it to new version config path
     parser.add_argument('-c', metavar='CONFIG', help='path to config file')
     parser.add_argument('-s', metavar='SERVER_ADDR', help='server address')
-    parser.add_argument('-p', metavar='SERVER_PORT', help='server port', default='8388')
-    parser.add_argument('-b', metavar='LOCAL_ADDR', help='local address', default='127.0.0.1')
-    parser.add_argument('-l', metavar='LOCAL_PORT', help='local port', default='1080')
+    parser.add_argument(
+        '-p', metavar='SERVER_PORT', help='server port', default='8388')
+    parser.add_argument(
+        '-b', metavar='LOCAL_ADDR', help='local address', default='127.0.0.1')
+    parser.add_argument(
+        '-l', metavar='LOCAL_PORT', help='local port', default='1080')
     parser.add_argument('-k', metavar='PASSWORD', help='password')
-    parser.add_argument('-m', metavar='METHOD', help='encryption method', default='aes-256-cfb')
-    parser.add_argument('-O', metavar='PROTOCOL', help='protocol', default='http_simple')
-    parser.add_argument('-G', metavar='PROTOCOL_PARAM', help='protocol param', default='')
-    parser.add_argument('-o', metavar='OBFS', help='obfsplugin', default='http_simple')
-    parser.add_argument('-g', metavar='OBFS_PARAM', help='obfs param', default='')
-    parser.add_argument('-L', metavar='SSR_LINK', help='connect using ssr link')
-    parser.add_argument('-t', metavar='TIMEOUT', help='timeout in seconds', default=300)
-    parser.add_argument('--fast-open', action='store_true', help='use TCP_FAST_OPEN, requires Linux 3.7+')
-    parser.add_argument('-d', metavar='', help='daemon mode (start/stop/restart)', choices=['start', 'stop', 'restart'])
-    parser.add_argument('--pid-file', metavar='PID_FILE', help='pid file for daemon mode')
-    parser.add_argument('--log-file', metavar='LOG_FILE', help='log file daemon mode')
+    parser.add_argument(
+        '-m',
+        metavar='METHOD',
+        help='encryption method',
+        default='aes-256-cfb')
+    parser.add_argument(
+        '-O', metavar='PROTOCOL', help='protocol', default='http_simple')
+    parser.add_argument(
+        '-G', metavar='PROTOCOL_PARAM', help='protocol param', default='')
+    parser.add_argument(
+        '-o', metavar='OBFS', help='obfsplugin', default='http_simple')
+    parser.add_argument(
+        '-g', metavar='OBFS_PARAM', help='obfs param', default='')
+    parser.add_argument(
+        '-L', metavar='SSR_LINK', help='connect using ssr link')
+    parser.add_argument(
+        '-t', metavar='TIMEOUT', help='timeout in seconds', default=300)
+    parser.add_argument(
+        '--fast-open',
+        action='store_true',
+        help='use TCP_FAST_OPEN, requires Linux 3.7+')
+    parser.add_argument(
+        '-d',
+        metavar='',
+        help='daemon mode (start/stop/restart)',
+        choices=['start', 'stop', 'restart'])
+    parser.add_argument(
+        '--pid-file', metavar='PID_FILE', help='pid file for daemon mode')
+    parser.add_argument(
+        '--log-file', metavar='LOG_FILE', help='log file daemon mode')
     parser.add_argument('--user', metavar='USER', help='run as user')
     parser.add_argument('--workers', metavar='WORKERS', default=1)
-    parser.add_argument('-v', '-vv', action='count', help='verbose mode', default=0)
+    parser.add_argument(
+        '-v', '-vv', action='count', help='verbose mode', default=0)
     parser.add_argument('-q', '-qq', action='count', help='quiet mode')
-    parser.add_argument('--version', metavar='version', help='show version information')
+    parser.add_argument(
+        '--version', metavar='version', help='show version information')
 
     subparsers = parser.add_subparsers(dest='command', help='sub-commands')
     server_parser = subparsers.add_parser('server', help='xxx')
     feed_parser = subparsers.add_parser('feed', help='yyy')
     status_parser = subparsers.add_parser('status', help='show current status')
+    config_parser = subparsers.add_parser('config', help='yyy')
 
     server_parser.add_argument('subcmd', help='server command')
-    server_parser.add_argument('-d', metavar='', help='daemon mode (start/stop/restart)', choices=['start', 'stop', 'restart'])
-    feed_parser.add_argument('--link', help='ssr link')     # TODO: if no link, ask later.
+    server_parser.add_argument(
+        '-d',
+        metavar='',
+        help='daemon mode (start/stop/restart)',
+        choices=['start', 'stop', 'restart'])
+    feed_parser.add_argument(
+        '--link', help='ssr link')  # TODO: if no link, ask later.
     feed_parser.add_argument('subcmd', help='subscription command')
     feed_parser.add_argument('--source', help='souurce address')
-    status_parser.add_argument('subcmd', help='show current status')
+    # status_parser.add_argument('subcmd', help='show current status')
+    config_parser.add_argument('subcmd', help='show current status')
 
     if args_:
         args = parser.parse_args(args_)
