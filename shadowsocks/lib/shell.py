@@ -529,3 +529,33 @@ def remove_comment(json):
 def parse_json_in_str(data):
     # parse json and convert everything from unicode to str
     return json.loads(data, object_hook=_decode_dict)
+
+
+def print_server_info(servers,
+                      header=None,
+                      indexed=False,
+                      verbose=False,
+                      hightlight=False):
+    # server = decode_ssrlink(ssr)
+    if hightlight:
+        print('*' * 100)
+    if header:
+        print(header)
+    if isinstance(servers, dict):  # a single server
+        servers = [servers]
+    index = 1
+    for server in servers:
+        server_info = [
+            server['server'], server['server_port'], server['password'],
+            server['remarks'], server['group']
+        ]
+        if indexed:
+            server_info = ['{}  '.format(index)] + server_info
+        if verbose:
+            server_info += [
+                server['protocol'], server['method'], server['obfs']
+            ]  # TODO: ping value check
+        print(*server_info)
+        index += 1
+    if hightlight:
+        print('*' * 100)
