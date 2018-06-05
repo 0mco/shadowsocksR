@@ -16,7 +16,6 @@ setup(
         'shadowsocks', 'shadowsocks.bin', 'shadowsocks.plugins',
         'shadowsocks.crypto', 'shadowsocks.obfsplugin', 'shadowsocks.lib',
         'shadowsocks.crypto', 'shadowsocks.core', 'shadowsocks.obfsplugin',
-        'shadowsocks.utils', 
     ],
     # package_data={
     #     'shadowsocks': ['README.rst', 'LICENSE']

@@ -46,6 +46,10 @@ def decode_ssrlink(link):
     return config
 
 
+def encode_to_ssr(server):
+    pass
+
+
 def is_valide_ssrlink(ssrlink):
     return ssrlink[:6] == 'ssr://'
 
