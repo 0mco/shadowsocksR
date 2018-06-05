@@ -16,11 +16,6 @@ class Service:
 class Client(Service):
     def __init__(self):
         super().__init__()
-        self.commands = {
-            'server': command.ServerCommands,
-            'feed': command.FeedCommands,
-            'status': command.StatusCommands
-        }
 
     def start(self):
         args = shell.parse_args()
@@ -35,13 +30,8 @@ class Client(Service):
             # And we intentionally do not parse_config for possibly missing some arguments.
             logging.debug('loading config from: {}'.format(config_path))
             self.config = ClientConfigManager(config_path)
-            if args.command == 'feed':
-                command.FeedCommands(self, args)
-            if args.command == 'server':
-                command.ServerCommands(self, args)
-            if args.command == 'status':
-                print('this is current status')
-                pass
+
+            command.Commands(args.command, self, args)
 
         else:  # old procedure
             config = shell.parse_config(True)
