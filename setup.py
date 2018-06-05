@@ -15,14 +15,16 @@ setup(
     packages=[
         'shadowsocks', 'shadowsocks.bin', 'shadowsocks.plugins',
         'shadowsocks.crypto', 'shadowsocks.obfsplugin', 'shadowsocks.lib',
-        'shadowsocks.crypto', 'shadowsocks.core', 'shadowsocks.obfsplugin'
+        'shadowsocks.crypto', 'shadowsocks.core', 'shadowsocks.obfsplugin',
+        'shadowsocks.utils', 
     ],
     # package_data={
     #     'shadowsocks': ['README.rst', 'LICENSE']
     # },
     install_requires=[],
     entry_points={
-        'console_scripts': ['ssclient=shadowsocks.bin.client:main'],
+        'console_scripts': ['ssclient=shadowsocks.bin.client:main',
+                            'ssserver=shadowsocks.bin.server:main'],
     },
     classifiers=[
         'License :: OSI Approved :: Apache Software License',

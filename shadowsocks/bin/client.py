@@ -17,14 +17,15 @@
 
 from __future__ import absolute_import, division, print_function, \
     with_statement
+import os, sys
 
 if __name__ == '__main__':
-    import os, sys
     file_path = os.path.dirname(os.path.realpath(__file__))
     sys.path.insert(0, os.path.join(file_path, '../../'))
 
 # NOTE: add '../../' to path if you want to execute directly.
-from shadowsocks.lib import shell, service
+from shadowsocks.lib import shell
+from shadowsocks.core import service
 
 
 def main():

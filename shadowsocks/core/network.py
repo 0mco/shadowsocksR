@@ -1,8 +1,5 @@
-from shadowsocks.core import eventloop, tcprelay, udprelay, asyncdns
-from shadowsocks import daemon
-from shadowsocks.lib import shell
-from shadowsocks.utils import socks
-import socket
+from shadowsocks.core import eventloop, tcprelay, udprelay, asyncdns, daemon
+from shadowsocks.lib import shell, socks
 import logging
 import time
 import threading

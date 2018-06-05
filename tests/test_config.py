@@ -1,4 +1,4 @@
-from .utils import *
+from utils import *
 add_path_if_main()
 
 
@@ -48,7 +48,12 @@ def test_subscription():
     config = ClientConfigManager('test_config.pickle')
     singleton_test = ClientConfigManager('test_config.pickle')
     assert config is singleton_test
-    config.clear()
+    print('before:')
+    servers = config.get_server()
+    sub = config.get_subscription()
+    print('server:', servers)
+    print('subscription:', sub)
+    # config.clear()
     config.add_subscription(['sub1', 'sub2'])
     config.add_server(['server1', 'server2'])
     servers = config.get_server()

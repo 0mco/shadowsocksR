@@ -1,5 +1,6 @@
 *.py[co]
 __pycache__
+.pytest_cache
 
 # Packages
 *.egg
@@ -33,6 +34,7 @@ htmlcov
 user-config.json
 userapiconfig.py
 usermysql.json
+client_config.json
 
 # Ignore tags
 tags

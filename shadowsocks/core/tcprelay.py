@@ -29,9 +29,8 @@ import random
 import platform
 import threading
 
-from shadowsocks.core import encrypt, eventloop, common, lru_cache
-from shadowsocks import obfs, version
-from shadowsocks.lib import shell
+from shadowsocks.core import encrypt, eventloop, common, lru_cache, obfs
+from shadowsocks.lib import shell, version
 from shadowsocks.core.common import pre_parse_header, parse_header
 
 # we clear at most TIMEOUTS_CLEAN_SIZE timeouts each time

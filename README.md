@@ -21,7 +21,7 @@ Server
 
 ### Usage for single user on linux platform
 
-Run
+Run:
     bash initcfg.sh
 
 move to "~/shadowsocksr/shadowsocks", then run:

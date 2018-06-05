@@ -28,8 +28,7 @@ if __name__ == '__main__':
     sys.path.insert(0, os.path.join(file_path, '../../'))
 
 from shadowsocks.core import eventloop, tcprelay, udprelay, \
-    asyncdns, common, manager
-from shadowsocks import daemon
+    asyncdns, common, manager, daemon
 from shadowsocks.lib import shell
 
 

@@ -14,10 +14,7 @@ if __name__ == '__main__':
     sys.path.insert(0, os.path.join(file_path, '../'))
 
 from shadowsocks.lib import ssrlink
-# import requests
 from urllib import request
-import pickle
-import logging
 
 
 def fetch_ssr(url):
@@ -38,21 +35,6 @@ def fetch_ssr(url):
     # Of course we can handle more correctly.
     # But as for now, it just works.
     return [link.strip() for link in ssrlinks if ssrlink.is_valide_ssrlink(link)]
-
-
-def load_servers():
-    with open('ssr.pickle') as f:
-        ssrlinks = pickle.load(f)
-    return ssrlinks
-
-
-def update_servers(url):
-    try:
-        ssrlinks = fetch_ssr(url)
-        with open('ssr.pickle', 'w') as f:
-            pickle.dump(ssrlinks, f)
-    except Exception as e:
-        logging.error(e)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,8 @@
-from shadowsocks.core import eventloop, tcprelay, udprelay, asyncdns
-from shadowsocks.lib import shell, network
+from shadowsocks.core import eventloop, tcprelay, udprelay, asyncdns, daemon, network
+from shadowsocks.lib import shell, ssrlink
 from shadowsocks.lib.config import ClientConfigManager
 from shadowsocks.lib.ssrlink import decode_ssrlink
-from shadowsocks.lib import ssrlink
-from shadowsocks.subscribe import fetch_ssr
-from shadowsocks import daemon
+from shadowsocks.plugins.subscribe import fetch_ssr
 import logging
 import signal
 
@@ -54,7 +52,7 @@ class Client(Service):
                     #     print_server_info(server)
                     servers = [decode_ssrlink(ssr) for ssr in ssrs]
                     header = ' ' * 40 + 'SERVER LIST' + ' ' * 40
-                    print_server_info(servers, header=header, verbose=True, hightlight=True)
+                    print_server_info(servers, header=header, indexed=True, verbose=True, hightlight=True)
                 elif args.subcmd == 'switch':
                     # When network error, switch ssr randomly
                     # signal.signal(signal.SIGUSR1, self.random_switch_ssr)
@@ -187,7 +185,7 @@ class StatusCommands(Commands):
     pass
 
 
-def print_server_info(servers, header=None, verbose=False, hightlight=False):
+def print_server_info(servers, header=None, indexed=False, verbose=False, hightlight=False):
     # server = decode_ssrlink(ssr)
     if hightlight:
         print('*' * 100)
@@ -195,12 +193,14 @@ def print_server_info(servers, header=None, verbose=False, hightlight=False):
         print(header)
     if isinstance(servers, dict):       # a single server
         servers = [servers]
+    index = 1
     for server in servers:
+        server_info = [server['server'], server['server_port'], server['password'], server['remarks'], server['group']]
+        if indexed:
+            server_info = ['{}  '.format(index)] + server_info
         if verbose:
-            # print(server['server'], server['server_port'], server['password'].decode('utf-8'), server['remarks'], server['group'], server['protocol'], server['method'], server['obfs'])         # TODO: ping value check
-            print(server['server'], server['server_port'], server['password'], server['remarks'], server['group'], server['protocol'], server['method'], server['obfs'])         # TODO: ping value check
-        else:
-            # print(server['server'], server['server_port'], server['password'].decode('utf-8'), server['remarks'], server['group'])
-            print(server['server'], server['server_port'], server['password'], server['remarks'], server['group'])
+            server_info += [server['protocol'], server['method'], server['obfs']]         # TODO: ping value check
+        print(*server_info)
+        index += 1
     if hightlight:
         print('*' * 100)
