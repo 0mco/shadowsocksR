@@ -1,4 +1,4 @@
-from shadowsocks.lib.ssrlink import decode_ssrlink
+from shadowsocks.lib.ssrlink import decode_ssrlink, encode_to_link
 from shadowsocks.lib import shell
 from shadowsocks.core import daemon, network
 from shadowsocks.lib.shell import print_server_info
@@ -130,19 +130,47 @@ class ServerCommands(BaseCommands):
         ssr = target.get_server_list()[0]
         config_from_link = decode_ssrlink(ssr)
         config = shell.parse_config(True, config_from_link)
-        daemon.daemon_exec(config)
+        # daemon.daemon_exec(config)
+        if self.args.d:
+            log_file = '/tmp/shadowsocksr.log'
+            pid_file = '/tmp/shadowsocksr.pid'
+            daemon.daemon_start(pid_file, log_file)
         print_server_info(config)
         target.network = network.ClientNetwork(config)
         target.network.start()
 
     def add(self):
-        pass
+        if self.args.L:
+            link = self.args.L
+        else:
+            config = {}
+            config['server'] = input('sever address:')
+            config['server_port'] = input('sever port:')
+            config['protocol'] = input('protocol:')
+            config['method'] = input('method:')
+            config['obfs'] = input('obfs:')
+            config['password'] = input('password:')
+            link = encode_to_link(config)
+        self.target.config.add_server(link)
 
     def remove(self):
+        server_list = self.target.config.get_server()
+        choice = user_chooice(server_list, message='please input the number which you want to remvoe') 
+        choice = int(choice) - 1
+        del server_list[choice]
+        self.target.config.update_server_list(server_list)
         pass
 
-    def disconnect(self):
-        pass
+    def stop(self):
+        daemon.daemon_stop('/tmp/shadowsocksr.pid')
+
+    def restart(self):
+        # log_file = '/tmp/shadowsocksr.log'
+        # pid_file = '/tmp/shadowsocksr.pid'
+        # daemon.daemon_stop(pid_file)
+        # daemon.daemon_start(pid_file, log_file)
+        self.stop()
+        self.start()
 
 
 class FeedCommands(BaseCommands):
@@ -190,3 +218,11 @@ class ConfigCommands(BaseCommands):
 
     def autoupdate(self):
         pass
+
+
+def user_chooice(options, message):
+    # for i in range(len(options)):
+    #     print('%-2d ' % (i+1) + options[i])
+    print_server_info((decode_ssrlink(ssr) for ssr in options), indexed=True)
+    print(message)
+    return input()
