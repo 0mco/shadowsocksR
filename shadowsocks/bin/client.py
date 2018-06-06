@@ -30,6 +30,7 @@ from shadowsocks.core import service
 
 def main():
     shell.check_python()
+    shell.startup_check()
 
     # fix py2exe
     if hasattr(sys, "frozen") and sys.frozen in \

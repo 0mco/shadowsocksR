@@ -19,6 +19,7 @@ class Client(Service):
 
     def start(self):
         args = shell.parse_args()
+        signal.signal(signal.SIGUSR1, self.manager)
         # TODO: when receive SIGUSR1, read a temp file encoded by pickle to get args;
         # and then execute correspond commmand in this process.
         if args.command:
@@ -30,6 +31,10 @@ class Client(Service):
             # And we intentionally do not parse_config for possibly missing some arguments.
             logging.debug('loading config from: {}'.format(config_path))
             self.config = ClientConfigManager(config_path)
+            if self.config.get_auto_update_config():
+                if daemon.get_daemon_pid() is None:         # if already run, do not update
+                    logging.info('checking feed update')
+                    self.fetch_server_list()
 
             command.Commands(args.command, self, args)
 
@@ -53,7 +58,8 @@ class Client(Service):
         servers = self.config.get_server()
         return servers
 
-    def print_server_list(self, ssrs):
+    def print_server_list(self, ssrs, header=None, indexed=True, verbose=True, hightlight=True):
+        shell.print_server_info((decode_ssrlink(link) for link in ssrs))
         for ssr in ssrs:
             server = decode_ssrlink(ssr)
             print_server_info(server)
@@ -81,7 +87,8 @@ class Client(Service):
             i -= 1
 
         self.config.update_server_list(servers)
-        self.print_server_list(servers)
+        self.print_server_list(servers, header='*' * 20 + "SERVER LIST AFTER UPDATE" + '*' * 20)
+
 
     def switch_ssr(self, config):
         self.network.pause()
@@ -89,7 +96,7 @@ class Client(Service):
         time.sleep(10)
         self.network.resume()
 
-    def random_switch_ssr(self, signum, frame):
+    def random_switch_ssr(self):
         import random
         ssrs = self.get_server_list()
         ssr = random.choice(ssrs)
@@ -97,3 +104,9 @@ class Client(Service):
         config = shell.parse_config(True, config_from_link)
         print_server_info(config, verbose=True, hightlight=True)
         self.network.switch(config)
+
+    def manager(self, signum, frame):
+        if signum == signal.SIGUSR1:            # network error signal
+            if self.config.get_auto_switch_config():
+                # switch ssr randomly if autoswitch is set.
+                self.random_switch_ssr()
