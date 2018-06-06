@@ -5,59 +5,45 @@ ShadowsocksR
 
 A fast tunnel proxy that helps you bypass firewalls.
 
-UPDATE
-------
-
-### Support for SSR link
-
-    python3 local.py -L "ssr://your-ssr-link"
-
-Server
-------
 
 ### Install
 
-    git clone https://github.com/shadowsocksr/shadowsocksr.git
+    git clone https://github.com/0mco/shadowsocksR.git
+    cd shadowsocksR && python setup.py install
 
-### Usage for single user on linux platform
 
-Run:
-    bash initcfg.sh
+### Usage
+for client
+    ssclient -L "your ssr-link"         // connect to ssr server via ssr link
+    ssclient feed add --source "your subscription address"      // add subscription source
+    ssclient feed list          // show subscription list
+    ssclient feed fetch         // update server list
+    ssclient server list
+    ssclient server add --link "ssr link"
+    ssclient server start -d start          // connect to ssr server in daemon mode
+    ssclient server remove
+you can also run
+    ssclient -s 172.17.1.101 -p 4043 -k password -m aes-128-cfb -O auth_aes128_md5 -o tls1.2_ticket_auth_compatible
 
-move to "~/shadowsocksr/shadowsocks", then run:
-
-    python server.py -p 443 -k password -m aes-128-cfb -O auth_aes128_md5 -o tls1.2_ticket_auth_compatible
+for server
+    ssserver -p 443 -k password -m aes-128-cfb -O auth_aes128_md5 -o tls1.2_ticket_auth_compatible
 
 Check all the options via `-h`.
-
-You can also use a configuration file instead (recommend), move to "~/shadowsocksr" and edit the file "user-config.json", then move to "~/shadowsocksr/shadowsocks" again, just run:
-
-    python server.py
-
-To run in the background:
-
-    ./logrun.sh
-
-To stop:
-
-    ./stop.sh
-
-To monitor the log:
-
-    ./tail.sh
+    ssclient -h
+    ssclient server -h
 
 
-Client
-------
+### New features
+    * SSR link support        (ssclient -L "your ssr-link")
+    * subscription support
+    * autoswitch support
 
-* [Windows] / [macOS]
-* [Android] / [iOS]
-* [OpenWRT]
 
-Use GUI clients on your local PC/phones. Check the README of your client
-for more information.
-
-Documentation
--------------
-
-You can find all the documentation in the [Wiki].
+### TODO
+    * autostart support
+    * windows support
+    * package
+    * system proxy
+    * python 2.7 supoort
+    * improve documents
+    * code cleaning
