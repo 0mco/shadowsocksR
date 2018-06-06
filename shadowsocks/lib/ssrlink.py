@@ -3,9 +3,15 @@
 """
 Encode/decode SSR link.
 """
+if __name__ == '__main__':
+    import os, sys
+    file_path = os.path.dirname(os.path.realpath(__file__))
+    sys.path.insert(0, os.path.join(file_path, '../../'))
+
 
 from shadowsocks.core import common
 import base64
+# from urllib import urlencode
 
 
 def base64_decode(string):
@@ -18,6 +24,10 @@ def base64_decode(string):
 
     string = adjust_padding(string.strip())
     return common.to_str(base64.urlsafe_b64decode(common.to_bytes(string)))
+
+
+def base64_encode(string):
+    return common.to_str(base64.urlsafe_b64encode(common.to_bytes(string))).replace('=', '')
 
 
 def decode_ssrlink(link):
@@ -46,8 +56,19 @@ def decode_ssrlink(link):
     return config
 
 
-def encode_to_ssr(server):
-    pass
+def encode_to_link(server):
+    required = ':'.join([server['server'], server['server_port'], server['protocol'], server['method'], server['obfs'], base64_encode(server['password'])])
+    optional = []
+    for k, v in server.items():
+        if k not in ['server', 'server_port', 'protocol', 'method', 'obfs', 'password']:
+            if k == 'uot':              # somehow this value is not base64-encoded.
+                optional.append('{}={}'.format(k, v))
+            else:
+                # optional[k] = base64_encode(v)
+                optional.append('{}={}'.format(k, base64_encode(v)))
+    optional = '&'.join(optional)
+    link = '/?'.join((required, optional))
+    return link
 
 
 def is_valide_ssrlink(ssrlink):
@@ -71,4 +92,9 @@ if __name__ == "__main__":
         # s = base64_decode(sys.argv[1])
         # a = s.split('\n')
         # print(a)
-        print(decode_ssrlink(sys.argv[1]))
+        # print(decode_ssrlink(sys.argv[1]))
+        print(decode_ssrlink('ssr://' + sys.argv[1]))
+        print(base64_decode(sys.argv[1]))
+        server = decode_ssrlink('ssr://' + sys.argv[1])
+        print(encode_to_link(server))
+
