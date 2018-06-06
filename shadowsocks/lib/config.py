@@ -18,7 +18,13 @@ def check_config_path():
         os.makedirs(config_path)
 
 
-check_config_path()
+def check_config():
+    """Check/handle (e.g. handle auto-startup if not done) according config file."""
+    # TODO:
+    check_config_path()
+
+
+check_config()
 
 
 def load_before_read(func):
@@ -63,6 +69,8 @@ def expand_key(d, keys):
         keys = keys.split(_key_sep)
     cur = d
     for key_ in keys:
+        if key_ == '':
+            continue
         if key_ not in cur:
             raise Exception('no key: {} in {}'.format(key_, cur))
         cur = cur[key_]
@@ -212,33 +220,61 @@ class ClientConfigManager(BaseConfigManager):
         self._hold = True
 
         self.config = {}
-        self.create('servers', [])      # TODO: priority queue
-        self.create('subscriptions', {'auto_update': 1, 'list': []})
-        self.create('auto_switch', 1)
-        self.create('auto_start', 0)
+        self.create('/servers', [])      # TODO: priority queue
+        self.create('/subscriptions', {'auto_update': 1, 'list': []})
+        self.create('/auto_switch', 1)
+        self.create('/auto_startup', 0)
 
         self._hold = False
         print('Initializing...')
         print(self.config)
 
     def get_server(self):           # FIXME: it seems that get_server will reset config.
-        return list(self.get('servers', []))
+        return list(self.get('/servers', []))
 
     def add_server(self, ssr_addrs):
         if isinstance(ssr_addrs, str):
-            self.add('servers', ssr_addrs)
+            self.add('/servers', ssr_addrs)
         else:                               # if ssr_addrs is a container
-            self.union('servers', ssr_addrs)
+            self.union('/servers', ssr_addrs)
 
     def update_server_list(self, ssr_list):
         assert type(ssr_list) is list
-        self.create('servers', ssr_list)
+        self.create('/servers', ssr_list)
 
     def get_subscription(self):
-        return list(self.get('subscriptions/list'))
+        return list(self.get('/subscriptions/list'))
 
     def add_subscription(self, addrs):
         if isinstance(addrs, str):
-            self.add('subscriptions/list', addrs)
+            self.add('/subscriptions/list', addrs)
         else:
-            self.union('subscriptions/list', addrs)
+            self.union('/subscriptions/list', addrs)
+
+    # TODO: here you need to really do the jobs.
+    def set_auto_update(self):
+        self.update('/subscriptions/auto_update', 1)
+
+    def cancel_auto_update(self):
+        self.update('/subscriptions/auto_update', 0)
+
+    def get_auto_update_config(self):
+        return self.get('/subscriptions/auto_update')
+
+    def set_auto_switch(self):
+        self.update('/auto_switch', 1)
+
+    def cancel_auto_switch(self):
+        self.update('/auto_switch', 0)
+
+    def get_auto_switch_config(self):
+        return self.get('/auto_switch')
+
+    def set_auto_startup(self):
+        self.update('/auto_startup', 1)
+
+    def cancel_auto_startup(self):
+        self.update('/auto_startup', 0)
+
+    def get_auto_startup_config(self):
+        return self.get('/auto_startup')

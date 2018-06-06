@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, \
 import os
 import json
 import sys
-import getopt
 import argparse
 import logging
 from shadowsocks.core.common import to_bytes, to_str, IPNetwork, PortRange
@@ -44,6 +43,18 @@ def check_python():
     elif info[0] not in [2, 3]:
         print('Python version not supported')
         sys.exit(1)
+
+
+def check_config_path():
+    config_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '../config'))
+    if not os.path.exists(config_path):
+        os.makedirs(config_path)
+
+
+def startup_check():
+    """Check/handle (e.g. handle auto-startup if not done) according config file."""
+    # TODO:
+    check_config_path()
 
 
 def print_exception(e):
