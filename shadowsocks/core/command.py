@@ -137,7 +137,7 @@ class ServerCommands(BaseCommands):
         config = shell.parse_config(True, config_from_link)
         if self.args.d:
             daemon.daemon_start()
-        print_server_info(config)
+        print_server_info(config, verbose=True, hightlight=True)
         target.network = network.ClientNetwork(config)
         target.network.start()
 

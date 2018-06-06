@@ -37,6 +37,7 @@ usermysql.json
 client_config.json
 client-config.json
 *.json
+*.log
 
 # Ignore tags
 tags

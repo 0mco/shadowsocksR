@@ -18,19 +18,34 @@
 from __future__ import absolute_import, division, print_function, \
     with_statement
 import os, sys
+import logging
 
+
+file_dir = os.path.dirname(os.path.realpath(__file__))
+log_dir = os.path.realpath(os.path.join(file_dir, '../log'))
 if __name__ == '__main__':
-    file_path = os.path.dirname(os.path.realpath(__file__))
-    sys.path.insert(0, os.path.join(file_path, '../../'))
+    sys.path.insert(0, os.path.join(file_dir, '../../'))
 
 # NOTE: add '../../' to path if you want to execute directly.
 from shadowsocks.lib import shell
 from shadowsocks.core import service
 
 
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='[%m-%d %H:%M]',
+                    filename=os.path.join(log_dir, 'client.log'),
+                    filemode='w')
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
+
+
 def main():
     shell.check_python()
-    shell.startup_check()
+    shell.startup_init()
 
     # fix py2exe
     if hasattr(sys, "frozen") and sys.frozen in \

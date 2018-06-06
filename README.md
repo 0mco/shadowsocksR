@@ -51,8 +51,7 @@ Check all the options via `-h`.
 ### TODO
     * autostart support
     * windows support
-    * package
+    * packaging
     * system-wide proxy
-    * python 2.7 supoort
-    * improve documentation
-    * code cleaning
+
+### Known issue

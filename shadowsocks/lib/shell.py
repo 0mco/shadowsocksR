@@ -53,18 +53,15 @@ def check_python():
     elif info[0] == 3 and not info[1] >= 3:
         print('Python 3.3+ required')
         sys.exit(1)
-    elif info[0] not in [2, 3]:
-        print('Python version not supported')
-        sys.exit(1)
 
 
 def check_config_path():
-    config_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '../config'))
-    if not os.path.exists(config_path):
-        os.makedirs(config_path)
+    config_dir = os.path.realpath(os.path.join(os.path.dirname(__file__), '../config'))
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
 
 
-def startup_check():
+def startup_init():
     """Check/handle (e.g. handle auto-startup if not done) according config file."""
     # TODO:
     check_config_path()

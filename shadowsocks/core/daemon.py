@@ -182,22 +182,12 @@ def daemon_stop(pid_file=_default_pid_file):
 def get_daemon_pid(pid_file=_default_pid_file):
     try:
         with open(pid_file) as f:
-            buf = f.read()
-            pid = common.to_str(buf)
-            if not buf:
-                logging.error('not running')
-    except IOError as e:
-        shell.print_exception(e)
-        if e.errno == errno.ENOENT:
-            # always exit 0 if we are sure daemon is not running
-            logging.error('not running')
-            return
-        sys.exit(1)
-    pid = int(pid)
-    if pid > 0:
-        return pid
-    else:
-        return None
+            pid = int(f.read())
+            if pid > 0:
+                return pid
+    except Exception:
+        pass
+    return None
 
 
 def set_user(username):

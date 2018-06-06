@@ -59,42 +59,16 @@ class ClientNetwork(Network):
 
             daemon.set_user(config.get('user', None))
 
-            # TODO: here, you will start.
-            # write a manager for this try block.
-            # update config
-            # 用signal.alarm 定時更新
-
             signal.signal(shell.SIGNAL2, self.manager)
             # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
             signal.signal(signal.SIGALRM, self.manager)
             # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
             # 避免檢查時間過長導致段時間內高頻率檢查
             signal.alarm(self.alarm_period)
-            # signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.alarm_period)
+            signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.alarm_period)
+            # TODO: Windows FIX
+            # threading.Thread(target=self.period_network_check).start()
             threading.Thread(target=self.loop.run).start()
-
-            # _no_conn_count = 0
-            # while True:
-            #     if _no_conn_count >= 5:
-            #         raise Exception('connection error')
-            #     if self.connectivity():
-            #         print('connectivity ok')
-            #         _no_conn_count = 0
-            #     else:
-            #         print('bad connectivity')
-            #         _no_conn_count += 1
-            #     time.sleep(1)
-
-
-
-            # TODO: test use, test connection pause/resume/close
-            # while True:
-            #     time.sleep(5)
-            #     os.kill(os.getpid(), shell.SIGNAL1)
-            #     time.sleep(20)
-            #     os.kill(os.getpid(), shell.SIGNAL1)
-            #     time.sleep(40)
-            # print('all done')
 
         except Exception as e:
             shell.print_exception(e)
@@ -115,7 +89,6 @@ class ClientNetwork(Network):
         logging.info('print it to prevent address already in use error')
         self.init(config)
         self.restart()
-        pass
 
     def manager(self, signum, frame):
         # TODO: SIGNAL1 to toggle loop status, for saving limited SIGNAL numbers.
@@ -132,16 +105,17 @@ class ClientNetwork(Network):
             self.stop()
         elif signum == signal.SIGINT:
             sys.exit(1)
+
         elif signum == signal.SIGALRM:
             # print('received timer alarm', time.ctime())
-            # print('tring to ping baidu.com')
-            # latency = self.ping('www.baidu.com')
+            # print('trying to ping baidu.com')
+            # latency = self.ping('www.baidu.com', True)
             # print('latency to baidu.com is', latency)
             # if latency is None:
             #     self._throw_network_error_signal()
 
             if not self.connectivity():
-                logging.info('Network error detected, tring to switch a server')
+                logging.info('Network error detected, trying to switch a server')
                 self._throw_network_error_signal()
             signal.alarm(self.alarm_period)
 
@@ -176,7 +150,7 @@ class ClientNetwork(Network):
     def _throw_network_error_signal(self):
         os.kill(os.getpid(), shell.SIGNAL1)
 
-    def ping(self, host):
+    def ping(self, host, socks=False):
         """return None if cannnot connect."""
         latency = []
         for i in range(5):
@@ -184,7 +158,9 @@ class ClientNetwork(Network):
             # FIXME: if set proxy, the connect time why is so small; and otherwise it's normal
             # 難道是那個時候並沒有真正連接？
             # s.setblocking(False)
-            s.set_proxy(socks.SOCKS5, '127.0.0.1', 1080)        # TODO: change to local addr/port
+            if socks is True:
+                # s.set_proxy(socks.SOCKS5, '127.0.0.1', 1080)        # TODO: change to local addr/port
+                s.set_proxy(socks.SOCKS5, self.config['local_address'], self.config['local_port'])
             s.settimeout(10)
             # TODO: 解析ip，避免將解析ip的時間加入
             try:
@@ -207,3 +183,12 @@ class ClientNetwork(Network):
             return None
         else:
             return 1000 * sum(latency) / len(latency)
+
+    def period_network_check(self):
+        time.sleep(self.alarm_period)
+        if not self.connectivity():
+            logging.error('Network error detected, tring to switch a server')
+            self._throw_network_error_signal()
+        threading.Thread(target=self.period_network_check).start()
+        sys.exit(0)
+
