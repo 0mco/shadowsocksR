@@ -92,7 +92,7 @@ class ServerCommands(BaseCommands):
             verbose=True,
             hightlight=True)
 
-    def switch(self):
+    def test_switch(self):
         target = self.target
         # When network error, switch ssr randomly
         # signal.signal(signal.SIGUSR1, self.random_switch_ssr)
@@ -114,6 +114,13 @@ class ServerCommands(BaseCommands):
             time.sleep(20)
         print('all ssr tested')
 
+    def switch(self):
+        import os
+        pid = daemon.get_daemon_pid()
+        if pid is not None:
+            os.kill(pid, signal.SIGUSR1)        # notify process with this pid to switch
+            # FIXME: it will switch only when autoswitch is set :(
+
     def connect(self):
         target = self.target
         ssr = target.get_server_list()[0]
@@ -125,16 +132,11 @@ class ServerCommands(BaseCommands):
 
     def start(self):
         target = self.target
-        # When network error, switch ssr randomly
-        signal.signal(signal.SIGUSR1, target.random_switch_ssr)
         ssr = target.get_server_list()[0]
         config_from_link = decode_ssrlink(ssr)
         config = shell.parse_config(True, config_from_link)
-        # daemon.daemon_exec(config)
         if self.args.d:
-            log_file = '/tmp/shadowsocksr.log'
-            pid_file = '/tmp/shadowsocksr.pid'
-            daemon.daemon_start(pid_file, log_file)
+            daemon.daemon_start()
         print_server_info(config)
         target.network = network.ClientNetwork(config)
         target.network.start()
@@ -155,22 +157,22 @@ class ServerCommands(BaseCommands):
 
     def remove(self):
         server_list = self.target.config.get_server()
-        choice = user_chooice(server_list, message='please input the number which you want to remvoe') 
+        choice = user_chooice(server_list, message='please input the number which you want to remove')
         choice = int(choice) - 1
         del server_list[choice]
         self.target.config.update_server_list(server_list)
         pass
 
     def stop(self):
-        daemon.daemon_stop('/tmp/shadowsocksr.pid')
+        daemon.daemon_stop()
 
     def restart(self):
-        # log_file = '/tmp/shadowsocksr.log'
-        # pid_file = '/tmp/shadowsocksr.pid'
-        # daemon.daemon_stop(pid_file)
-        # daemon.daemon_start(pid_file, log_file)
         self.stop()
         self.start()
+
+    def status(self):
+        """print network information (ping/connectivity) of servers."""
+        pass
 
 
 class FeedCommands(BaseCommands):
@@ -207,17 +209,37 @@ class StatusCommands(BaseCommands):
 
 
 class ConfigCommands(BaseCommands):
+    # TODO: maybe change command name to toggle
     def __init__(self, cmd, target, args):
         super().__init__(cmd, target, args)
 
     def autostart(self):
-        pass
+        # TODO: config autostart yes/no
+        autostart = self.target.config.get_auto_startup_config()
+        if autostart:
+            self.target.config.cancel_auto_startup()
+            print('set autostart')
+        else:
+            self.target.config.set_auto_startup()
+            print('cancel autostart')
 
     def autoswitch(self):
-        pass
+        autoswitch = self.target.config.get_auto_switch_config()
+        if autoswitch:
+            self.target.config.cancel_auto_switch()
+            print('set autoswitch')
+        else:
+            self.target.config.set_auto_switch()
+            print('cancel autoswitch')
 
     def autoupdate(self):
-        pass
+        autoupdate = self.target.config.get_auto_update_config()
+        if autoupdate:
+            self.target.config.cancel_auto_update()
+            print('set autoupdate')
+        else:
+            self.target.config.set_auto_update()
+            print('cancel autoupdate')
 
 
 def user_chooice(options, message):
