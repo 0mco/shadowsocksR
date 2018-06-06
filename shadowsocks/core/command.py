@@ -130,7 +130,11 @@ class ServerCommands(BaseCommands):
         ssr = target.get_server_list()[0]
         config_from_link = decode_ssrlink(ssr)
         config = shell.parse_config(True, config_from_link)
-        daemon.daemon_exec(config)
+        # daemon.daemon_exec(config)
+        if self.args.d:
+            log_file = '/tmp/shadowsocksr.log'
+            pid_file = '/tmp/shadowsocksr.pid'
+            daemon.daemon_start(pid_file, log_file)
         print_server_info(config)
         target.network = network.ClientNetwork(config)
         target.network.start()
@@ -157,8 +161,16 @@ class ServerCommands(BaseCommands):
         self.target.config.update_server_list(server_list)
         pass
 
-    def disconnect(self):
-        pass
+    def stop(self):
+        daemon.daemon_stop('/tmp/shadowsocksr.pid')
+
+    def restart(self):
+        # log_file = '/tmp/shadowsocksr.log'
+        # pid_file = '/tmp/shadowsocksr.pid'
+        # daemon.daemon_stop(pid_file)
+        # daemon.daemon_start(pid_file, log_file)
+        self.stop()
+        self.start()
 
 
 class FeedCommands(BaseCommands):

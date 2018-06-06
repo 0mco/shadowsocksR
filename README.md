@@ -22,7 +22,7 @@ A fast tunnel proxy that helps you bypass firewalls.
     ssclient server list
     ssclient server add --link "ssr link"
     ssclient server remove          // remove a ssr server
-    ssclient server start -d start          // connect to ssr server in daemon mode
+    ssclient server start -d        // connect to ssr server in daemon mode
     ssclient server remove
 
 you can also run
