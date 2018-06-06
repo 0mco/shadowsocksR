@@ -95,7 +95,7 @@ class ServerCommands(BaseCommands):
     def test_switch(self):
         target = self.target
         # When network error, switch ssr randomly
-        # signal.signal(signal.SIGUSR1, self.random_switch_ssr)
+        # signal.signal(shell.SIGNAL1, self.random_switch_ssr)
         # test switch ssr
         ssrs = target.get_server_list()
         first = True
@@ -118,7 +118,7 @@ class ServerCommands(BaseCommands):
         import os
         pid = daemon.get_daemon_pid()
         if pid is not None:
-            os.kill(pid, signal.SIGUSR1)        # notify process with this pid to switch
+            os.kill(pid, shell.SIGNAL1)        # notify process with this pid to switch
             # FIXME: it will switch only when autoswitch is set :(
 
     def connect(self):
@@ -137,7 +137,7 @@ class ServerCommands(BaseCommands):
         config = shell.parse_config(True, config_from_link)
         if self.args.d:
             daemon.daemon_start()
-        print_server_info(config)
+        print_server_info(config, verbose=True, hightlight=True)
         target.network = network.ClientNetwork(config)
         target.network.start()
 

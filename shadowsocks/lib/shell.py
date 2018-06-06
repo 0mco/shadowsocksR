@@ -23,6 +23,7 @@ import json
 import sys
 import argparse
 import logging
+import signal
 from shadowsocks.core.common import to_bytes, to_str, IPNetwork, PortRange
 from shadowsocks.core import encrypt
 from shadowsocks.lib.ssrlink import decode_ssrlink
@@ -30,6 +31,18 @@ from shadowsocks.lib.ssrlink import decode_ssrlink
 VERBOSE_LEVEL = 5
 
 verbose = 0
+
+# SIGNAL1 is used to notify Service that current ssr network is poor;
+# SIGNAL2 is used to notify Network that current service has decided to switch ssr server.
+if sys.platform == 'win32':
+    SIGNAL1 = signal.SIGILL
+    SIGNAL2 = signal.SIGSEGV
+else:
+    try:
+        SIGNAL1 = signal.SIGUSR1
+        SIGNAL2 = signal.SIGUSR2
+    except Exception:
+        logging.error('current os is not supported yet')
 
 
 def check_python():
@@ -40,18 +53,15 @@ def check_python():
     elif info[0] == 3 and not info[1] >= 3:
         print('Python 3.3+ required')
         sys.exit(1)
-    elif info[0] not in [2, 3]:
-        print('Python version not supported')
-        sys.exit(1)
 
 
 def check_config_path():
-    config_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '../config'))
-    if not os.path.exists(config_path):
-        os.makedirs(config_path)
+    config_dir = os.path.realpath(os.path.join(os.path.dirname(__file__), '../config'))
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
 
 
-def startup_check():
+def startup_init():
     """Check/handle (e.g. handle auto-startup if not done) according config file."""
     # TODO:
     check_config_path()

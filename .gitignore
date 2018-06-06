@@ -43,6 +43,7 @@ tags
 # Temporary directories /files
 *.swp
 .idea
+*.log
 tmp
 TODO*
 venv

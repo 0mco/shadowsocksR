@@ -23,13 +23,26 @@ import os
 import logging
 import signal
 
+
+file_dir = os.path.dirname(os.path.realpath(__file__))
+log_dir = os.path.realpath(os.path.join(file_dir, '../log'))
 if __name__ == '__main__':
-    file_path = os.path.dirname(os.path.realpath(__file__))
-    sys.path.insert(0, os.path.join(file_path, '../../'))
+    sys.path.insert(0, os.path.join(file_dir, '../../'))
 
 from shadowsocks.core import eventloop, tcprelay, udprelay, \
     asyncdns, common, manager, daemon
 from shadowsocks.lib import shell
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='[%m-%d %H:%M]',
+                    filename=os.path.join(log_dir, 'server.log'),
+                    filemode='w')
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
 
 
 def main():

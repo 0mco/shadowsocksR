@@ -5,6 +5,7 @@ Python module documentation.
 """
 
 import json
+from datetime import date
 import os
 import sys
 
@@ -189,7 +190,6 @@ class BaseConfigManager:
             value = expand_key(self.config, key)
         except Exception:
             value = value_          # set to default value
-            raise
         return value
 
     @save_on_change
@@ -221,7 +221,8 @@ class ClientConfigManager(BaseConfigManager):
 
         self.config = {}
         self.create('/servers', [])      # TODO: priority queue
-        self.create('/subscriptions', {'auto_update': 1, 'list': []})
+        today = date.today().ftrftime('%Y-%m-%d')
+        self.create('/subscriptions', {'auto_update': 1, 'list': [], 'last_update': today})
         self.create('/auto_switch', 1)
         self.create('/auto_startup', 0)
 
@@ -278,3 +279,9 @@ class ClientConfigManager(BaseConfigManager):
 
     def get_auto_startup_config(self):
         return self.get('/auto_startup')
+
+    def get_last_update_time(self):
+        return self.get('/subscriptions/last_update', '1970-01-01')
+
+    def set_last_update_time(self, date):
+        self.update('/subscriptions/last_update', date)

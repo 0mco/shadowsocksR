@@ -5,6 +5,7 @@ from shadowsocks.lib.ssrlink import decode_ssrlink
 from shadowsocks.plugins.subscribe import fetch_ssr
 from shadowsocks.lib.shell import print_server_info
 import logging
+from datetime import date
 import signal
 
 
@@ -19,8 +20,8 @@ class Client(Service):
 
     def start(self):
         args = shell.parse_args()
-        signal.signal(signal.SIGUSR1, self.manager)
-        # TODO: when receive SIGUSR1, read a temp file encoded by pickle to get args;
+        signal.signal(shell.SIGNAL1, self.manager)
+        # TODO: when receive SIGNAL1, read a temp file encoded by pickle to get args;
         # and then execute correspond commmand in this process.
         if args.command:
             if args.c:
@@ -31,10 +32,10 @@ class Client(Service):
             # And we intentionally do not parse_config for possibly missing some arguments.
             logging.debug('loading config from: {}'.format(config_path))
             self.config = ClientConfigManager(config_path)
-            if self.config.get_auto_update_config():
-                if daemon.get_daemon_pid() is None:         # if already run, do not update
-                    logging.info('checking feed update')
-                    self.fetch_server_list()
+            if self.config.get_auto_update_config() and \
+                    (self.config.get_last_update_time() != date.today().strftime('%Y-%m-%d')):
+                logging.info('checking feed update')
+                self.fetch_server_list()
 
             command.Commands(args.command, self, args)
 
@@ -87,8 +88,9 @@ class Client(Service):
             i -= 1
 
         self.config.update_server_list(servers)
+        today = date.today().strftime('%Y-%m-%d')
+        self.config.set_last_update_time(today)
         self.print_server_list(servers, header='*' * 20 + "SERVER LIST AFTER UPDATE" + '*' * 20)
-
 
     def switch_ssr(self, config):
         self.network.pause()
@@ -106,7 +108,7 @@ class Client(Service):
         self.network.switch(config)
 
     def manager(self, signum, frame):
-        if signum == signal.SIGUSR1:            # network error signal
+        if signum == shell.SIGNAL1:            # network error signal
             if self.config.get_auto_switch_config():
                 # switch ssr randomly if autoswitch is set.
                 self.random_switch_ssr()
