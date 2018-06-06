@@ -19,8 +19,8 @@ class Client(Service):
 
     def start(self):
         args = shell.parse_args()
-        signal.signal(signal.SIGUSR1, self.manager)
-        # TODO: when receive SIGUSR1, read a temp file encoded by pickle to get args;
+        signal.signal(shell.SIGNAL1, self.manager)
+        # TODO: when receive SIGNAL1, read a temp file encoded by pickle to get args;
         # and then execute correspond commmand in this process.
         if args.command:
             if args.c:
@@ -106,7 +106,7 @@ class Client(Service):
         self.network.switch(config)
 
     def manager(self, signum, frame):
-        if signum == signal.SIGUSR1:            # network error signal
+        if signum == shell.SIGNAL1:            # network error signal
             if self.config.get_auto_switch_config():
                 # switch ssr randomly if autoswitch is set.
                 self.random_switch_ssr()

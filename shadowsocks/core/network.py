@@ -9,10 +9,10 @@ import signal
 
 
 class Network:
-    def sigusr1_handler(self, signum, frame):
+    def singnal1_handler(self, signum, frame):
         pass
 
-    def sigusr2_handler(self, signum, frame):
+    def singnal2_handler(self, signum, frame):
         pass
 
 
@@ -64,7 +64,7 @@ class ClientNetwork(Network):
             # update config
             # 用signal.alarm 定時更新
 
-            signal.signal(signal.SIGUSR2, self.manager)
+            signal.signal(shell.SIGNAL2, self.manager)
             # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
             signal.signal(signal.SIGALRM, self.manager)
             # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
@@ -90,9 +90,9 @@ class ClientNetwork(Network):
             # TODO: test use, test connection pause/resume/close
             # while True:
             #     time.sleep(5)
-            #     os.kill(os.getpid(), signal.SIGUSR1)
+            #     os.kill(os.getpid(), shell.SIGNAL1)
             #     time.sleep(20)
-            #     os.kill(os.getpid(), signal.SIGUSR1)
+            #     os.kill(os.getpid(), shell.SIGNAL1)
             #     time.sleep(40)
             # print('all done')
 
@@ -102,10 +102,10 @@ class ClientNetwork(Network):
 
     def stop(self):        # TODO: use only one single to toggle pause/resume
         """close tcp_server, udp_server."""
-        os.kill(os.getpid(), signal.SIGUSR2)
+        os.kill(os.getpid(), shell.SIGNAL2)
 
     def restart(self):
-        os.kill(os.getpid(), signal.SIGUSR2)
+        os.kill(os.getpid(), shell.SIGNAL2)
 
     def switch(self, config):
         self.stop()
@@ -118,9 +118,9 @@ class ClientNetwork(Network):
         pass
 
     def manager(self, signum, frame):
-        # TODO: SIGUSR1 to toggle loop status, for saving limited SIGUSR numbers.
-        # SIGUSR1 is for client to updat config, SIGUSR2 is for network to switch connection.
-        if signum == signal.SIGUSR2:        # pause eventloop.
+        # TODO: SIGNAL1 to toggle loop status, for saving limited SIGNAL numbers.
+        # SIGNAL1 is for client to updat config, SIGNAL2 is for network to switch connection.
+        if signum == shell.SIGNAL2:        # pause eventloop.
             if self.loop.is_paused():
                 self.loop.resume()
             else:
@@ -174,7 +174,7 @@ class ClientNetwork(Network):
         return False
 
     def _throw_network_error_signal(self):
-        os.kill(os.getpid(), signal.SIGUSR1)
+        os.kill(os.getpid(), shell.SIGNAL1)
 
     def ping(self, host):
         """return None if cannnot connect."""

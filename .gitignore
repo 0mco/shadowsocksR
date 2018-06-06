@@ -35,6 +35,7 @@ user-config.json
 userapiconfig.py
 usermysql.json
 client_config.json
+client-config.json
 *.json
 
 # Ignore tags

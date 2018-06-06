@@ -23,6 +23,7 @@ import json
 import sys
 import argparse
 import logging
+import signal
 from shadowsocks.core.common import to_bytes, to_str, IPNetwork, PortRange
 from shadowsocks.core import encrypt
 from shadowsocks.lib.ssrlink import decode_ssrlink
@@ -30,6 +31,18 @@ from shadowsocks.lib.ssrlink import decode_ssrlink
 VERBOSE_LEVEL = 5
 
 verbose = 0
+
+# SIGNAL1 is used to notify Service that current ssr network is poor;
+# SIGNAL2 is used to notify Network that current service has decided to switch ssr server.
+if sys.platform == 'win32':
+    SIGNAL1 = signal.SIGILL
+    SIGNAL2 = signal.SIGSEGV
+else:
+    try:
+        SIGNAL1 = signal.SIGUSR1
+        SIGNAL2 = signal.SIGUSR2
+    except Exception:
+        logging.error('current os is not supported yet')
 
 
 def check_python():
