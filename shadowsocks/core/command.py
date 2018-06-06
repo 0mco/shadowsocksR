@@ -150,6 +150,11 @@ class ServerCommands(BaseCommands):
         self.target.config.add_server(link)
 
     def remove(self):
+        server_list = self.target.config.get_server()
+        choice = user_chooice(server_list, message='please input the number which you want to remvoe') 
+        choice = int(choice) - 1
+        del server_list[choice]
+        self.target.config.update_server_list(server_list)
         pass
 
     def disconnect(self):
@@ -204,7 +209,8 @@ class ConfigCommands(BaseCommands):
 
 
 def user_chooice(options, message):
-    for i in range(len(options)):
-        print('%-2d' % (i+1) + options[i])
+    # for i in range(len(options)):
+    #     print('%-2d ' % (i+1) + options[i])
+    print_server_info((decode_ssrlink(ssr) for ssr in options), indexed=True)
     print(message)
     return input()

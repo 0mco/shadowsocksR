@@ -21,6 +21,7 @@ A fast tunnel proxy that helps you bypass firewalls.
     ssclient feed fetch         // update server list
     ssclient server list
     ssclient server add --link "ssr link"
+    ssclient server remove          // remove a ssr server
     ssclient server start -d start          // connect to ssr server in daemon mode
     ssclient server remove
 

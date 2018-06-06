@@ -318,6 +318,7 @@ def parse_args(args_=None):
     config_parser = subparsers.add_parser('config', help='yyy')
 
     server_parser.add_argument('subcmd', help='server command')
+    server_parser.add_argument('-L', help='server command')
     server_parser.add_argument(
         '-d',
         metavar='',
