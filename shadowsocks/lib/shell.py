@@ -585,13 +585,13 @@ def print_server_info(servers,
     for server in servers:
         server_info = [
             server['server'], server['server_port'], server['password'],
-            server['remarks'], server['group']
+            server.get('remarks', ''), server.get('group', '')
         ]
         if indexed:
-            server_info = ['{}  '.format(index)] + server_info
+            server_info = ['%-2d' % index] + server_info
         if verbose:
             server_info += [
-                server['protocol'], server['method'], server['obfs']
+                server.get('protocol', ''), server.get('method', ''), server.get('obfs', '')
             ]  # TODO: ping value check
         print(*server_info)
         index += 1

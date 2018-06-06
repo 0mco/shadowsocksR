@@ -1,4 +1,4 @@
-from shadowsocks.lib.ssrlink import decode_ssrlink
+from shadowsocks.lib.ssrlink import decode_ssrlink, encode_to_link
 from shadowsocks.lib import shell
 from shadowsocks.core import daemon, network
 from shadowsocks.lib.shell import print_server_info
@@ -136,7 +136,15 @@ class ServerCommands(BaseCommands):
         target.network.start()
 
     def add(self):
-        pass
+        config = {}
+        config['server'] = input('sever address:')
+        config['server_port'] = input('sever port:')
+        config['protocol'] = input('protocol:')
+        config['method'] = input('method:')
+        config['obfs'] = input('obfs:')
+        config['password'] = input('password:')
+        link = encode_to_link(config)
+        self.target.config.add_server(link)
 
     def remove(self):
         pass
@@ -190,3 +198,10 @@ class ConfigCommands(BaseCommands):
 
     def autoupdate(self):
         pass
+
+
+def user_chooice(options, message):
+    for i in range(len(options)):
+        print('%-2d' % (i+1) + options[i])
+    print(message)
+    return input()

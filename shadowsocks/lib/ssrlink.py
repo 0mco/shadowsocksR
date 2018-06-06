@@ -67,7 +67,7 @@ def encode_to_link(server):
                 # optional[k] = base64_encode(v)
                 optional.append('{}={}'.format(k, base64_encode(v)))
     optional = '&'.join(optional)
-    link = '/?'.join((required, optional))
+    link = 'ssr://' + base64_encode('/?'.join((required, optional)))
     return link
 
 
