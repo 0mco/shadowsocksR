@@ -320,10 +320,9 @@ def parse_args(args_=None):
     server_parser.add_argument('subcmd', help='server command')
     server_parser.add_argument('-L', help='server command')
     server_parser.add_argument(
-        '-d',
-        metavar='',
+        '-d', action='store_true',
         help='daemon mode (start/stop/restart)',
-        choices=['start', 'stop', 'restart'])
+        )
     feed_parser.add_argument(
         '--link', help='ssr link')  # TODO: if no link, ask later.
     feed_parser.add_argument('subcmd', help='subscription command')
