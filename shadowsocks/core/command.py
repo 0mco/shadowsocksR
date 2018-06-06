@@ -136,14 +136,17 @@ class ServerCommands(BaseCommands):
         target.network.start()
 
     def add(self):
-        config = {}
-        config['server'] = input('sever address:')
-        config['server_port'] = input('sever port:')
-        config['protocol'] = input('protocol:')
-        config['method'] = input('method:')
-        config['obfs'] = input('obfs:')
-        config['password'] = input('password:')
-        link = encode_to_link(config)
+        if self.args.L:
+            link = self.args.L
+        else:
+            config = {}
+            config['server'] = input('sever address:')
+            config['server_port'] = input('sever port:')
+            config['protocol'] = input('protocol:')
+            config['method'] = input('method:')
+            config['obfs'] = input('obfs:')
+            config['password'] = input('password:')
+            link = encode_to_link(config)
         self.target.config.add_server(link)
 
     def remove(self):
