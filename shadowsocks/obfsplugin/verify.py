@@ -32,16 +32,19 @@ import hmac
 import hashlib
 
 import shadowsocks
-from shadowsocks import common
+from shadowsocks.core import common
 from shadowsocks.obfsplugin import plain
-from shadowsocks.common import to_bytes, to_str, ord, chr
+from shadowsocks.core.common import to_bytes, to_str, ord, chr
+
 
 def create_verify_deflate(method):
     return verify_deflate(method)
 
+
 obfs_map = {
-        'verify_deflate': (create_verify_deflate,),
+    'verify_deflate': (create_verify_deflate, ),
 }
+
 
 def match_begin(str1, str2):
     if len(str1) >= len(str2):
@@ -49,9 +52,11 @@ def match_begin(str1, str2):
             return True
     return False
 
+
 class obfs_verify_data(object):
     def __init__(self):
         pass
+
 
 class verify_base(plain.plain):
     def __init__(self, method):
@@ -75,6 +80,7 @@ class verify_base(plain.plain):
 
     def server_decode(self, buf):
         return (buf, True, False)
+
 
 class verify_deflate(verify_base):
     def __init__(self, method):
@@ -139,7 +145,7 @@ class verify_deflate(verify_base):
                 self.raw_trans = True
                 self.recv_buf = b''
                 if self.decrypt_packet_num == 0:
-                    return (b'E'*2048, False)
+                    return (b'E' * 2048, False)
                 else:
                     raise Exception('server_post_decrype data error')
             if length > len(self.recv_buf):
@@ -151,4 +157,3 @@ class verify_deflate(verify_base):
         if out_buf:
             self.decrypt_packet_num += 1
         return (out_buf, False)
-

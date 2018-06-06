@@ -1,7 +1,6 @@
 import codecs
 from setuptools import setup
 
-
 with codecs.open('README.rst', encoding='utf-8') as f:
     long_description = f.read()
 
@@ -13,16 +12,19 @@ setup(
     author='clowwindy',
     author_email='clowwindy42@gmail.com',
     url='https://github.com/shadowsocks/shadowsocks',
-    packages=['shadowsocks', 'shadowsocks.crypto', 'shadowsocks.obfsplugin'],
-    package_data={
-        'shadowsocks': ['README.rst', 'LICENSE']
-    },
+    packages=[
+        'shadowsocks', 'shadowsocks.bin', 'shadowsocks.plugins',
+        'shadowsocks.crypto', 'shadowsocks.obfsplugin', 'shadowsocks.lib',
+        'shadowsocks.crypto', 'shadowsocks.core', 'shadowsocks.obfsplugin',
+    ],
+    # package_data={
+    #     'shadowsocks': ['README.rst', 'LICENSE']
+    # },
     install_requires=[],
-    entry_points="""
-    [console_scripts]
-    sslocal = shadowsocks.local:main
-    ssserver = shadowsocks.server:main
-    """,
+    entry_points={
+        'console_scripts': ['ssclient=shadowsocks.bin.client:main',
+                            'ssserver=shadowsocks.bin.server:main'],
+    },
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 2',

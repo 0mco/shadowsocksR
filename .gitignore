@@ -1,0 +1,47 @@
+*.py[co]
+__pycache__
+.pytest_cache
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+var
+sdist
+develop-eggs
+.installed.cfg
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+htmlcov
+.coverage*
+.tox
+
+#Translations
+*.mo
+
+#Mr Developer
+.mr.developer.cfg
+
+.DS_Store
+
+# Ignore user config
+user-config.json
+userapiconfig.py
+usermysql.json
+client_config.json
+
+# Ignore tags
+tags
+
+# Temporary directories /files
+*.swp
+.idea
+tmp
+TODO*
+venv

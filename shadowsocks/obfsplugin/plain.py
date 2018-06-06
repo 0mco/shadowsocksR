@@ -22,15 +22,18 @@ import sys
 import hashlib
 import logging
 
-from shadowsocks.common import ord
+from shadowsocks.core.common import ord
+
 
 def create_obfs(method):
     return plain(method)
 
+
 obfs_map = {
-        'plain': (create_obfs,),
-        'origin': (create_obfs,),
+    'plain': (create_obfs, ),
+    'origin': (create_obfs, ),
 }
+
 
 class plain(object):
     def __init__(self, method):
@@ -40,7 +43,8 @@ class plain(object):
     def init_data(self):
         return b''
 
-    def get_overhead(self, direction): # direction: true for c->s false for s->c
+    def get_overhead(self,
+                     direction):  # direction: true for c->s false for s->c
         return 0
 
     def get_server_info(self):
@@ -101,4 +105,3 @@ class plain(object):
         if head_type == 3:
             return 4 + ord(buf[1])
         return def_value
-
