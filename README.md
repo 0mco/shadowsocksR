@@ -13,6 +13,7 @@ A fast tunnel proxy that helps you bypass firewalls.
 
 
 ### Usage
+
 ####for client
 
     ssclient -L "your ssr-link"         // connect to ssr server via ssr link
@@ -23,7 +24,9 @@ A fast tunnel proxy that helps you bypass firewalls.
     ssclient server add --link "ssr link"
     ssclient server remove          // remove a ssr server
     ssclient server start -d        // connect to ssr server in daemon mode
+    ssclient serve rswitch
     ssclient server remove
+    ssclient config autoswitch          // auto-switch when current connection to ssr server is poor
 
 you can also run
 
@@ -51,5 +54,5 @@ Check all the options via `-h`.
     * package
     * system-wide proxy
     * python 2.7 supoort
-    * improve documents
+    * improve documentation
     * code cleaning

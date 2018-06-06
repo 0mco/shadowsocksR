@@ -23,11 +23,14 @@ import sys
 import logging
 import signal
 import time
+import errno
 from shadowsocks.core import common
 from shadowsocks.lib import shell
 
 # this module is ported from ShadowVPN daemon.c
 
+_default_pid_file = '/tmp/shadowsocksr.pid'
+_default_log_file = '/tmp/shadowsocksr.log'
 
 def daemon_exec(config):
     if 'daemon' in config:
@@ -91,7 +94,7 @@ def freopen(f, mode, stream):
     os.dup2(oldfd, newfd)
 
 
-def daemon_start(pid_file, log_file):
+def daemon_start(pid_file=_default_pid_file, log_file=_default_log_file):
 
     def handle_exit(signum, _):
         if signum == signal.SIGTERM:
@@ -132,8 +135,7 @@ def daemon_start(pid_file, log_file):
         sys.exit(1)
 
 
-def daemon_stop(pid_file):
-    import errno
+def daemon_stop(pid_file=_default_pid_file):
     try:
         with open(pid_file) as f:
             buf = f.read()
@@ -175,6 +177,27 @@ def daemon_stop(pid_file):
         sys.exit(1)
     print('stopped')
     os.unlink(pid_file)
+
+
+def get_daemon_pid(pid_file=_default_pid_file):
+    try:
+        with open(pid_file) as f:
+            buf = f.read()
+            pid = common.to_str(buf)
+            if not buf:
+                logging.error('not running')
+    except IOError as e:
+        shell.print_exception(e)
+        if e.errno == errno.ENOENT:
+            # always exit 0 if we are sure daemon is not running
+            logging.error('not running')
+            return
+        sys.exit(1)
+    pid = int(pid)
+    if pid > 0:
+        return pid
+    else:
+        return None
 
 
 def set_user(username):
