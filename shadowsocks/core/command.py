@@ -2,7 +2,6 @@ from shadowsocks.lib.ssrlink import decode_ssrlink, encode_to_link
 from shadowsocks.lib import shell
 from shadowsocks.core import daemon, network
 from shadowsocks.lib.shell import print_server_info
-import signal
 
 
 # won't work, because it will not automatically execute.
@@ -19,25 +18,26 @@ import signal
 
 class BaseCommands:
     """Abstract Commands class, subclass should call super.__init__(),
-    and then initialize SUBCMDS, and at the end of __init__, call self.execute().
+    and then initialize SUBCMDS, and at the end of __init__, call self._execute().
     All method that are not started with underline will be automatically added
     to self.SUBCMDS with the funciton name, if you want to use other name,
     you can update the self.SUBCMDS dict in your __init__()."""
     # TODO: automatically add function to SUBCMDS dict.
+
     def __init__(self, cmd, target, args):
         self.cmd = cmd
         self.target = target
         self.args = args
-        self.SUBCMDS = {}
+        if not hasattr(self, 'SUBCMDS'):
+            self.SUBCMDS = {}
 
         for method in dir(self):
-            if callable(getattr(self, method)) and not str.startswith(method, '_'):
-                # funcname = method.split('.')[1].split(' ')[0]
-                self.SUBCMDS.update({method: getattr(self, method)})
-                # self.cmd.append(getattr(self, method))
-        self.execute()
+            if callable(getattr(self, method)) and not method.startswith('_'):
+                if method not in self.SUBCMDS:
+                    self.SUBCMDS.update({method: getattr(self, method)})
+        self._execute()
 
-    def execute(self):
+    def _execute(self):
         # subcmd = args.subcmd.lower()
         cmd = self.cmd.lower()
         if cmd in self.SUBCMDS:
@@ -120,6 +120,8 @@ class ServerCommands(BaseCommands):
         if pid is not None:
             os.kill(pid, shell.SIGNAL1)        # notify process with this pid to switch
             # FIXME: it will switch only when autoswitch is set :(
+        else:
+            print('daemon not started')
 
     def connect(self):
         target = self.target
@@ -211,6 +213,12 @@ class StatusCommands(BaseCommands):
 class ConfigCommands(BaseCommands):
     # TODO: maybe change command name to toggle
     def __init__(self, cmd, target, args):
+        if not hasattr(self, 'SUBCMDS'):
+            self.SUBCMDS = {'import': self._import}
+        else:
+            self.SUBCMDS.update({'import': self._import})
+        # import is python keyword, we need toadd `import` command
+        # manually to self.SUBCMDS.
         super().__init__(cmd, target, args)
 
     def autostart(self):
@@ -240,6 +248,12 @@ class ConfigCommands(BaseCommands):
         else:
             self.target.config.set_auto_update()
             print('cancel autoupdate')
+
+    def _import(self):
+        pass
+
+    def export(self):
+        pass
 
 
 def user_chooice(options, message):

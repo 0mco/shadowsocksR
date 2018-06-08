@@ -60,16 +60,20 @@ class ClientNetwork(Network):
             daemon.set_user(config.get('user', None))
 
             signal.signal(shell.SIGNAL2, self.manager)
-            # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
-            signal.signal(signal.SIGALRM, self.manager)
-            # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
-            # 避免檢查時間過長導致段時間內高頻率檢查
-            signal.alarm(self.alarm_period)
-            signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.alarm_period)
-            # TODO: Windows FIX
-            # threading.Thread(target=self.period_network_check).start()
-            threading.Thread(target=self.loop.run).start()
 
+            if sys.platform == 'win32':
+                # set timer for Windows:
+                threading.Thread(target=self.period_network_check).start()
+            else:
+                # set timer for unix-like system:
+                # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
+                signal.signal(signal.SIGALRM, self.manager)
+                # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
+                # 避免檢查時間過長導致段時間內高頻率檢查
+                signal.alarm(self.alarm_period)
+                signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.alarm_period)
+
+            threading.Thread(target=self.loop.run).start()
         except Exception as e:
             shell.print_exception(e)
             sys.exit(1)
@@ -185,10 +189,14 @@ class ClientNetwork(Network):
             return 1000 * sum(latency) / len(latency)
 
     def period_network_check(self):
+        """this is for windows timer check."""
         time.sleep(self.alarm_period)
         if not self.connectivity():
             logging.error('Network error detected, tring to switch a server')
-            self._throw_network_error_signal()
+            # self._throw_network_error_signal()
+            # TODO:
+            # we directly switch here, do not send signal to service.
+            # if self.config
         threading.Thread(target=self.period_network_check).start()
         sys.exit(0)
 

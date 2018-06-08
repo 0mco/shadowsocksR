@@ -24,7 +24,7 @@ A fast tunnel proxy that helps you bypass firewalls.
     ssclient server add --link "ssr link"
     ssclient server remove          // remove a ssr server
     ssclient server start -d        // connect to ssr server in daemon mode
-    ssclient serve rswitch
+    ssclient server switch
     ssclient server remove
     ssclient config autoswitch          // auto-switch when current connection to ssr server is poor
 
@@ -43,15 +43,14 @@ Check all the options via `-h`.
 
 
 ### New features
+    * auto-switch support
+    * auto-update support
     * SSR link support        (ssclient -L "your ssr-link")
     * subscription support
-    * autoswitch support
 
 
 ### TODO
     * autostart support
-    * windows support
-    * packaging
     * system-wide proxy
 
 ### Known issue

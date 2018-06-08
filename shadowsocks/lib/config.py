@@ -221,7 +221,7 @@ class ClientConfigManager(BaseConfigManager):
 
         self.config = {}
         self.create('/servers', [])      # TODO: priority queue
-        today = date.today().ftrftime('%Y-%m-%d')
+        today = date.today().strftime('%Y-%m-%d')
         self.create('/subscriptions', {'auto_update': 1, 'list': [], 'last_update': today})
         self.create('/auto_switch', 1)
         self.create('/auto_startup', 0)

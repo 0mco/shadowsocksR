@@ -61,10 +61,17 @@ def check_config_path():
         os.makedirs(config_dir)
 
 
+def check_log_path():
+    log_dir = os.path.realpath(os.path.join(os.path.dirname(__file__), '../log'))
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+
 def startup_init():
     """Check/handle (e.g. handle auto-startup if not done) according config file."""
     # TODO:
     check_config_path()
+    check_log_path()
 
 
 def print_exception(e):
