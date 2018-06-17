@@ -11,6 +11,9 @@ import signal
 
 class Service:
     def __init__(self):
+        self.config_manager = None
+        self.config = None
+        self.server_link = None
         pass
 
 
@@ -31,9 +34,9 @@ class Client(Service):
             # In cmd mode, we always load config from config file.
             # And we intentionally do not parse_config for possibly missing some arguments.
             logging.debug('loading config from: {}'.format(config_path))
-            self.config = ClientConfigManager(config_path)
-            if self.config.get_auto_update_config() and \
-                    (self.config.get_last_update_time() != date.today().strftime('%Y-%m-%d')):
+            self.config_manager = ClientConfigManager(config_path)
+            if self.config_manager.get_auto_update_config() and \
+                    (self.config_manager.get_last_update_time() != date.today().strftime('%Y-%m-%d')):
                 logging.info('checking feed update')
                 self.fetch_server_list()
 
@@ -46,17 +49,17 @@ class Client(Service):
             self.network.start()
 
     def add_feed_source(self, addr):
-        self.config.add_subscription(addr)
+        self.config_manager.add_subscription(addr)
         self.fetch_server_list()
-        # self.config.fetch_server_list()
+        # self.config_manager.fetch_server_list()
 
     def get_source_list(self):
-        # self.config.clear()
-        sources = self.config.get_subscription()
+        # self.config_manager.clear()
+        sources = self.config_manager.get_subscription()
         return sources
 
     def get_server_list(self):
-        servers = self.config.get_server()
+        servers = self.config_manager.get_server()
         return servers
 
     def print_server_list(self, ssrs, header=None, indexed=True, verbose=True, hightlight=True):
@@ -66,7 +69,7 @@ class Client(Service):
             print_server_info(server)
 
     def fetch_server_list(self):
-        sources = self.config.get_subscription()
+        sources = self.config_manager.get_subscription()
         servers = []
         for addr in sources:
             try:
@@ -87,9 +90,9 @@ class Client(Service):
                     j -= 1
             i -= 1
 
-        self.config.update_server_list(servers)
+        self.config_manager.update_server_list(servers)
         today = date.today().strftime('%Y-%m-%d')
-        self.config.set_last_update_time(today)
+        self.config_manager.set_last_update_time(today)
         self.print_server_list(servers, header='*' * 20 + "SERVER LIST AFTER UPDATE" + '*' * 20)
 
     def switch_ssr(self, config):
@@ -109,6 +112,8 @@ class Client(Service):
 
     def manager(self, signum, frame):
         if signum == shell.SIGNAL1:            # network error signal
-            if self.config.get_auto_switch_config():
+            if self.config_manager.get_auto_switch_config():
+                # move this server to dead group
+                self.config_manager.set_server_dead(self.server_link)
                 # switch ssr randomly if autoswitch is set.
                 self.random_switch_ssr()

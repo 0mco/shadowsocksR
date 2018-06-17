@@ -357,6 +357,8 @@ def parse_args(args_=None):
     feed_parser.add_argument('--source', help='souurce address')
     # status_parser.add_argument('subcmd', help='show current status')
     config_parser.add_argument('subcmd', help='show current status')
+    config_parser.add_argument('-c', help='path to the import config file')
+    config_parser.add_argument('-o', help='path to the :xport config file')
 
     if args_:
         args = parser.parse_args(args_)

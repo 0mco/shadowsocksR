@@ -57,7 +57,7 @@ def decode_ssrlink(link):
 
 
 def encode_to_link(server):
-    required = ':'.join([server['server'], server['server_port'], server['protocol'], server['method'], server['obfs'], base64_encode(server['password'])])
+    required = ':'.join([server['server'], str(server['server_port']), server['protocol'], server['method'], server['obfs'], base64_encode(server['password'])])
     optional = []
     for k, v in server.items():
         if k not in ['server', 'server_port', 'protocol', 'method', 'obfs', 'password']:
@@ -65,7 +65,7 @@ def encode_to_link(server):
                 optional.append('{}={}'.format(k, v))
             else:
                 # optional[k] = base64_encode(v)
-                optional.append('{}={}'.format(k, base64_encode(v)))
+                optional.append('{}={}'.format(k, base64_encode(str(v))))
     optional = '&'.join(optional)
     link = 'ssr://' + base64_encode('/?'.join((required, optional)))
     return link

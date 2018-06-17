@@ -1,5 +1,6 @@
 from shadowsocks.core import eventloop, tcprelay, udprelay, asyncdns, daemon
 from shadowsocks.lib import shell, socks
+import socket
 import logging
 import time
 import threading
@@ -17,14 +18,14 @@ class Network:
 
 
 class ClientNetwork(Network):
-    def __init__(self, config):
+    def __init__(self, config, alarm_period=20):
         # initialize dns_resolver, loop
         self.tcp_server = None
         self.udp_server = None
         self.dns_resolver = None
         self.loop = None
         self.config = None
-        self.alarm_period = 20
+        self.alarm_period = alarm_period
         self.loop = eventloop.EventLoop()
         self.dns_resolver = asyncdns.DNSResolver()
         self.dns_resolver.add_to_loop(self.loop)
@@ -70,10 +71,12 @@ class ClientNetwork(Network):
                 signal.signal(signal.SIGALRM, self.manager)
                 # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
                 # 避免檢查時間過長導致段時間內高頻率檢查
+                # signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.manager)
                 signal.alarm(self.alarm_period)
-                signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.alarm_period)
 
             threading.Thread(target=self.loop.run).start()
+            latency = self.ping(config['server'])
+            print('latency: {}'.format(latency))
         except Exception as e:
             shell.print_exception(e)
             sys.exit(1)
@@ -154,7 +157,7 @@ class ClientNetwork(Network):
     def _throw_network_error_signal(self):
         os.kill(os.getpid(), shell.SIGNAL1)
 
-    def ping(self, host, socks=False):
+    def ping(self, host, with_socks=False):
         """return None if cannnot connect."""
         latency = []
         for i in range(5):
@@ -162,10 +165,10 @@ class ClientNetwork(Network):
             # FIXME: if set proxy, the connect time why is so small; and otherwise it's normal
             # 難道是那個時候並沒有真正連接？
             # s.setblocking(False)
-            if socks is True:
+            if with_socks is True:
                 # s.set_proxy(socks.SOCKS5, '127.0.0.1', 1080)        # TODO: change to local addr/port
                 s.set_proxy(socks.SOCKS5, self.config['local_address'], self.config['local_port'])
-            s.settimeout(10)
+            s.settimeout(2)
             # TODO: 解析ip，避免將解析ip的時間加入
             try:
                 start_time = time.time()
@@ -200,3 +203,26 @@ class ClientNetwork(Network):
         threading.Thread(target=self.period_network_check).start()
         sys.exit(0)
 
+
+def ping(host, port):
+    """return None if cannnot connect."""
+    latency = []
+    for i in range(5):
+        s = socket.socket()
+        s.settimeout(2)
+        # TODO: 解析ip，避免將解析ip的時間加入
+        try:
+            start_time = time.time()
+            s.connect((host, port))
+            s.send(b'0')
+            latency_ = time.time() - start_time
+            latency.append(latency_)
+        except Exception as e:
+            # print(e)
+            pass
+        finally:
+            s.close()
+    if not latency:             # return inf if can not connect
+        return float('inf')
+    else:
+        return 1000 * sum(latency) / len(latency)

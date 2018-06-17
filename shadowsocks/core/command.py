@@ -92,7 +92,7 @@ class ServerCommands(BaseCommands):
             verbose=True,
             hightlight=True)
 
-    def test_switch(self):
+    def _test_switch(self):
         target = self.target
         # When network error, switch ssr randomly
         # signal.signal(shell.SIGNAL1, self.random_switch_ssr)
@@ -135,26 +135,47 @@ class ServerCommands(BaseCommands):
     def start(self):
         target = self.target
         ssr = target.get_server_list()[0]
+
+        # this latency to server is not a good choice to determine whether the connection speed via this server
+        # best = (float('inf'), '')           # tuple of (latency, ssr-link)
+        # for link in target.get_server_list():
+        #     server_config = decode_ssrlink(link)
+        #     latency = network.ping(server_config['server'], int(server_config['server_port']))
+        #     print('server %s:%s\t\tlatency: %.2f' % (server_config['server'], server_config['server_port'], latency))
+        #     if latency < best[0]:
+        #         best = (latency, link)
+        #     if latency == float('inf'):
+        #         print('setting to dead')
+        #         target.config_manager.set_server_dead(link)
+        # if best[1] == '':
+        #     raise RuntimeError('can not connect to any server')
+        # ssr = best[1]
+
         config_from_link = decode_ssrlink(ssr)
         config = shell.parse_config(True, config_from_link)
+        target.config = config
+        target.server_link = ssr
         if self.args.d:
             daemon.daemon_start()
-        print_server_info(config, verbose=True, hightlight=True)
-        target.network = network.ClientNetwork(config)
+        print_server_info(target.config, verbose=True, hightlight=True)
+        target.network = network.ClientNetwork(target.config)
         target.network.start()
 
     def add(self):
         if self.args.L:
             link = self.args.L
         else:
-            config = {}
-            config['server'] = input('sever address:')
-            config['server_port'] = input('sever port:')
-            config['protocol'] = input('protocol:')
-            config['method'] = input('method:')
-            config['obfs'] = input('obfs:')
-            config['password'] = input('password:')
+            # config = {}
+            # config['server'] = input('sever address:')
+            # config['server_port'] = input('sever port:')
+            # config['protocol'] = input('protocol:')
+            # config['method'] = input('method:')
+            # config['obfs'] = input('obfs:')
+            # config['password'] = input('password:')
+            config = shell.parse_config(True)
             link = encode_to_link(config)
+            print(link)
+            return
         self.target.config.add_server(link)
 
     def remove(self):
@@ -250,6 +271,8 @@ class ConfigCommands(BaseCommands):
             print('cancel autoupdate')
 
     def _import(self):
+        if not self.args.c:
+            print('config file is not set')
         pass
 
     def export(self):

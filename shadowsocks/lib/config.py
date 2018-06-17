@@ -6,6 +6,7 @@ Python module documentation.
 
 import json
 from datetime import date
+from shadowsocks.lib import ssrlink
 import os
 import sys
 
@@ -220,7 +221,9 @@ class ClientConfigManager(BaseConfigManager):
         self._hold = True
 
         self.config = {}
-        self.create('/servers', [])      # TODO: priority queue
+        self.create('/servers', {})      # TODO: priority queue
+        self.create('/servers/alive', [])      # TODO: priority queue
+        self.create('/servers/dead', [])      # TODO: priority queue
         today = date.today().strftime('%Y-%m-%d')
         self.create('/subscriptions', {'auto_update': 1, 'list': [], 'last_update': today})
         self.create('/auto_switch', 1)
@@ -231,17 +234,58 @@ class ClientConfigManager(BaseConfigManager):
         print(self.config)
 
     def get_server(self):           # FIXME: it seems that get_server will reset config.
-        return list(self.get('/servers', []))
+        return list(self.get('/servers/alive', []))
 
     def add_server(self, ssr_addrs):
         if isinstance(ssr_addrs, str):
-            self.add('/servers', ssr_addrs)
+            self.add('/servers/alive', ssr_addrs)
         else:                               # if ssr_addrs is a container
-            self.union('/servers', ssr_addrs)
+            self.union('/servers/alive', ssr_addrs)
+
+    def remove_server(self, link):
+        servers = self.get_server()
+        config = ssrlink.decode_ssrlink(link)
+        addr, port = config['server'], config['server_port']
+        for link_ in servers:
+            config_ = ssrlink.decode_ssrlink(link_)
+            addr_, port_ = config_['server'], config_['server_port']
+            if addr == addr_ and port == port_:
+                servers.remove(link_)
+        self.update_server_list(servers)
+
+    # maybe I should set a status flag in '/servers' list
+    def get_dead_server_list(self):
+        return self.get('/servers/dead')
+
+    def add_dead_server(self, link):
+        self.add('/servers/dead', link)
+
+    def remove_dead_server(self, link):
+        servers = self.get_dead_server_list()
+        config = ssrlink.decode_ssrlink(link)
+        addr, port = config['server'], config['server_port']
+        for link_ in servers:
+            config_ = ssrlink.decode_ssrlink(link_)
+            addr_, port_ = config_['server'], config_['server_port']
+            if addr == addr_ and port == port_:
+                servers.remove(link_)
+        self.update_dead_server_list(servers)
+
+    def update_dead_server_list(self, ssr_list):
+        assert type(ssr_list) is list
+        self.create('/servers/dead', ssr_list)
+
+    def set_server_dead(self, link):
+        self.remove_server(link)
+        self.add_dead_server(link)
+
+    def set_server_valid(self, link):
+        self.remove_dead_server(link)
+        self.add_server(link)
 
     def update_server_list(self, ssr_list):
         assert type(ssr_list) is list
-        self.create('/servers', ssr_list)
+        self.create('/servers/alive', ssr_list)
 
     def get_subscription(self):
         return list(self.get('/subscriptions/list'))
