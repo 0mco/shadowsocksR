@@ -62,7 +62,15 @@ class Client(Service):
         servers = self.config_manager.get_server()
         return servers
 
-    def print_server_list(self, ssrs, header=None, indexed=True, verbose=True, hightlight=True):
+    def get_dead_server_list(self):
+        return self.config_manager.get_dead_server_list()
+
+    def print_server_list(self,
+                          ssrs,
+                          header=None,
+                          indexed=True,
+                          verbose=True,
+                          hightlight=True):
         shell.print_server_info((decode_ssrlink(link) for link in ssrs))
         for ssr in ssrs:
             server = decode_ssrlink(ssr)
@@ -93,7 +101,8 @@ class Client(Service):
         self.config_manager.update_server_list(servers)
         today = date.today().strftime('%Y-%m-%d')
         self.config_manager.set_last_update_time(today)
-        self.print_server_list(servers, header='*' * 20 + "SERVER LIST AFTER UPDATE" + '*' * 20)
+        self.print_server_list(
+            servers, header='*' * 20 + "SERVER LIST AFTER UPDATE" + '*' * 20)
 
     def switch_ssr(self, config):
         self.network.pause()
@@ -111,9 +120,9 @@ class Client(Service):
         self.network.switch(config)
 
     def manager(self, signum, frame):
-        if signum == shell.SIGNAL1:            # network error signal
+        if signum == shell.SIGNAL1:  # network error signal
             if self.config_manager.get_auto_switch_config():
                 # move this server to dead group
-                self.config_manager.set_server_dead(self.server_link)
+                # self.config_manager.set_server_dead(self.server_link)
                 # switch ssr randomly if autoswitch is set.
                 self.random_switch_ssr()

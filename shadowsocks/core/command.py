@@ -3,7 +3,6 @@ from shadowsocks.lib import shell
 from shadowsocks.core import daemon, network
 from shadowsocks.lib.shell import print_server_info
 
-
 # won't work, because it will not automatically execute.
 # def register(func):
 #     def decorated(self, *args, **kwargs):
@@ -22,6 +21,7 @@ class BaseCommands:
     All method that are not started with underline will be automatically added
     to self.SUBCMDS with the funciton name, if you want to use other name,
     you can update the self.SUBCMDS dict in your __init__()."""
+
     # TODO: automatically add function to SUBCMDS dict.
 
     def __init__(self, cmd, target, args):
@@ -48,7 +48,8 @@ class BaseCommands:
     def _wrong_cmd(self):
         """handler fo wrong command, override by subclass."""
         print('command `{}` is not implemented yet'.format(self.cmd))
-        print('those commands are currently implemented:', *self.SUBCMDS.keys())
+        print('those commands are currently implemented:',
+              *self.SUBCMDS.keys())
 
 
 class Commands(BaseCommands):
@@ -118,7 +119,8 @@ class ServerCommands(BaseCommands):
         import os
         pid = daemon.get_daemon_pid()
         if pid is not None:
-            os.kill(pid, shell.SIGNAL1)        # notify process with this pid to switch
+            os.kill(pid,
+                    shell.SIGNAL1)  # notify process with this pid to switch
             # FIXME: it will switch only when autoswitch is set :(
         else:
             print('daemon not started')
@@ -180,7 +182,9 @@ class ServerCommands(BaseCommands):
 
     def remove(self):
         server_list = self.target.config.get_server()
-        choice = user_chooice(server_list, message='please input the number which you want to remove')
+        choice = user_chooice(
+            server_list,
+            message='please input the number which you want to remove')
         choice = int(choice) - 1
         del server_list[choice]
         self.target.config.update_server_list(server_list)
@@ -196,6 +200,32 @@ class ServerCommands(BaseCommands):
     def status(self):
         """print network information (ping/connectivity) of servers."""
         pass
+
+    def rediscover(self):
+        target = self.target
+        for link in target.get_dead_server_list():
+            server_config = decode_ssrlink(link)
+            latency = network.ping(server_config['server'],
+                                   int(server_config['server_port']))
+            print('server %s:%s\t\tlatency: %.2f' %
+                  (server_config['server'], server_config['server_port'],
+                   latency))
+            if latency != float('inf'):
+                print('move server to alive group')
+                target.config_manager.set_server_valid(link)
+
+    def filter(self):
+        target = self.target
+        for link in target.get_server_list():
+            server_config = decode_ssrlink(link)
+            latency = network.ping(server_config['server'],
+                                   int(server_config['server_port']))
+            print('server %s:%s\t\tlatency: %.2f' %
+                  (server_config['server'], server_config['server_port'],
+                   latency))
+            if latency == float('inf'):
+                print('move server to dead group')
+                target.config_manager.set_server_dead(link)
 
 
 class FeedCommands(BaseCommands):

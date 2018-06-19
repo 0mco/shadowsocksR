@@ -75,7 +75,7 @@ class ClientNetwork(Network):
                 signal.alarm(self.alarm_period)
 
             threading.Thread(target=self.loop.run).start()
-            latency = self.ping(config['server'])
+            latency = self.ping(config['server'], int(config['server_port']))
             print('latency: {}'.format(latency))
         except Exception as e:
             shell.print_exception(e)
@@ -157,7 +157,7 @@ class ClientNetwork(Network):
     def _throw_network_error_signal(self):
         os.kill(os.getpid(), shell.SIGNAL1)
 
-    def ping(self, host, with_socks=False):
+    def ping(self, host, port, with_socks=False):
         """return None if cannnot connect."""
         latency = []
         for i in range(5):
@@ -172,7 +172,7 @@ class ClientNetwork(Network):
             # TODO: 解析ip，避免將解析ip的時間加入
             try:
                 start_time = time.time()
-                s.connect((host, 80))
+                s.connect((host, port))
                 s.send(b'0')
                 latency_ = time.time() - start_time
                 # print('latency to {}: {}'.format(host, latency_ * 1000))
