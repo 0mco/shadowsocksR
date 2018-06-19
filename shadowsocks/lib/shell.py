@@ -346,11 +346,45 @@ def parse_args(args_=None):
     config_parser = subparsers.add_parser('config', help='yyy')
 
     server_parser.add_argument('subcmd', help='server command')
-    server_parser.add_argument('-L', help='server command')
     server_parser.add_argument(
         '-d', action='store_true',
         help='daemon mode (start/stop/restart)',
         )
+
+    server_parser.add_argument('-c', metavar='CONFIG', help='path to config file')
+    server_parser.add_argument('-s', metavar='SERVER_ADDR', help='server address')
+    server_parser.add_argument(
+        '-p', metavar='SERVER_PORT', help='server port', default='8388')
+    server_parser.add_argument(
+        '-b', metavar='LOCAL_ADDR', help='local address', default='127.0.0.1')
+    server_parser.add_argument(
+        '-l', metavar='LOCAL_PORT', help='local port', default='1080')
+    server_parser.add_argument('-k', metavar='PASSWORD', help='password')
+    server_parser.add_argument(
+        '-m',
+        metavar='METHOD',
+        help='encryption method',
+        default='aes-256-cfb')
+    server_parser.add_argument(
+        '-O', metavar='PROTOCOL', help='protocol', default='http_simple')
+    server_parser.add_argument(
+        '-G', metavar='PROTOCOL_PARAM', help='protocol param', default='')
+    server_parser.add_argument(
+        '-o', metavar='OBFS', help='obfsplugin', default='http_simple')
+    server_parser.add_argument(
+        '-g', metavar='OBFS_PARAM', help='obfs param', default='')
+    server_parser.add_argument(
+        '-L', metavar='SSR_LINK', help='connect using ssr link')
+    server_parser.add_argument(
+        '-t', metavar='TIMEOUT', help='timeout in seconds', default=300)
+    server_parser.add_argument(
+        '--fast-open',
+        action='store_true',
+        help='use TCP_FAST_OPEN, requires Linux 3.7+')
+    server_parser.add_argument('--user', metavar='USER', help='run as user')
+    server_parser.add_argument('--workers', metavar='WORKERS', default=1)
+
+
     feed_parser.add_argument(
         '--link', help='ssr link')  # TODO: if no link, ask later.
     feed_parser.add_argument('subcmd', help='subscription command')
@@ -449,7 +483,9 @@ def parse_args(args_=None):
         config['verbose'] -= 1
     if args.L:
         config_from_ssrlink = decode_ssrlink(args.L)
-        config.update(config_from_ssrlink)
+        # config.update(config_from_ssrlink)
+        config_from_ssrlink.update(config)
+        config = config_from_ssrlink
 
     return args
 
