@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Version=1.0
-Name=electron-ssr
-Comment=electron-ssrstartup script
-Exec=/home/zhiping/Bureau/electron-ssr-0.2.2/electron-ssr --hidden
-StartupNotify=false
-Terminal=false
