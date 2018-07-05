@@ -65,6 +65,13 @@ class Client(Service):
     def get_dead_server_list(self):
         return self.config_manager.get_dead_server_list()
 
+    def get_server_by_addr(self, addr):
+        links = self.get_server_list()
+        for link in links:
+            server = ssrlink.decode_ssrlink(link)
+            if server['server'] == addr:
+                return link
+
     def print_server_list(self,
                           ssrs,
                           header=None,

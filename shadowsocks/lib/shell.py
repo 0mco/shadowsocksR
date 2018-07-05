@@ -383,6 +383,7 @@ def parse_args(args_=None):
         help='use TCP_FAST_OPEN, requires Linux 3.7+')
     server_parser.add_argument('--user', metavar='USER', help='run as user')
     server_parser.add_argument('--workers', metavar='WORKERS', default=1)
+    server_parser.add_argument('--addr', help='server address')
 
 
     feed_parser.add_argument(

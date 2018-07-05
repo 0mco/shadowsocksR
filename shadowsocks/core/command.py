@@ -137,21 +137,8 @@ class ServerCommands(BaseCommands):
     def start(self):
         target = self.target
         ssr = target.get_server_list()[0]
-
-        # this latency to server is not a good choice to determine whether the connection speed via this server
-        # best = (float('inf'), '')           # tuple of (latency, ssr-link)
-        # for link in target.get_server_list():
-        #     server_config = decode_ssrlink(link)
-        #     latency = network.ping(server_config['server'], int(server_config['server_port']))
-        #     print('server %s:%s\t\tlatency: %.2f' % (server_config['server'], server_config['server_port'], latency))
-        #     if latency < best[0]:
-        #         best = (latency, link)
-        #     if latency == float('inf'):
-        #         print('setting to dead')
-        #         target.config_manager.set_server_dead(link)
-        # if best[1] == '':
-        #     raise RuntimeError('can not connect to any server')
-        # ssr = best[1]
+        if self.args.addr:
+            ssr = target.get_server_by_addr(self.args.addr)
 
         config_from_link = decode_ssrlink(ssr)
         config = shell.parse_config(True, config_from_link)
