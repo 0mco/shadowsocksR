@@ -261,30 +261,30 @@ class ConfigCommands(BaseCommands):
 
     def autostart(self):
         # TODO: config autostart yes/no
-        autostart = self.target.config.get_auto_startup_config()
+        autostart = self.target.config_manager.get_auto_startup_config()
         if autostart:
-            self.target.config.cancel_auto_startup()
+            self.target.config_manager.cancel_auto_startup()
             print('set autostart')
         else:
-            self.target.config.set_auto_startup()
+            self.target.config_manager.set_auto_startup()
             print('cancel autostart')
 
     def autoswitch(self):
-        autoswitch = self.target.config.get_auto_switch_config()
+        autoswitch = self.target.config_manager.get_auto_switch_config()
         if autoswitch:
-            self.target.config.cancel_auto_switch()
+            self.target.config_manager.cancel_auto_switch()
             print('set autoswitch')
         else:
-            self.target.config.set_auto_switch()
+            self.target.config_manager.set_auto_switch()
             print('cancel autoswitch')
 
     def autoupdate(self):
-        autoupdate = self.target.config.get_auto_update_config()
+        autoupdate = self.target.config_manager.get_auto_update_config()
         if autoupdate:
-            self.target.config.cancel_auto_update()
+            self.target.config_manager.cancel_auto_update()
             print('set autoupdate')
         else:
-            self.target.config.set_auto_update()
+            self.target.config_manager.set_auto_update()
             print('cancel autoupdate')
 
     def _import(self):
