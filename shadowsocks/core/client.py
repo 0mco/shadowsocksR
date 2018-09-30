@@ -24,6 +24,8 @@ import argparse
 HOST = '127.0.0.1'
 PORT = 6113
 
+logger = logging.getLogger('shadowsocksr')
+
 
 class Client:
     def __init__(self, host=HOST, port=PORT):
@@ -42,7 +44,7 @@ class Client:
         self.sock.connect((self.host, self.port))
         self.sock.setblocking(False)
         # self.sock.settimeout(5)
-        logging.info('connected to %s:%d' % (self.host, self.port))
+        logger.info('connected to %s:%d' % (self.host, self.port))
 
     def start(self):
         # FIXME: clear exception (SystemExit) when using ctrl-c to exit 
@@ -54,7 +56,7 @@ class Client:
                 config_path = shell.find_config(True)
             # In cmd mode, we always load config from config file.
             # And we intentionally do not parse_config for possibly missing some arguments.
-            logging.debug('loading config from: {}'.format(config_path))
+            logger.debug('loading config from: {}'.format(config_path))
 
             cmd = ' '.join(s for s in sys.argv[1:])
             resp = self.request(cmd)

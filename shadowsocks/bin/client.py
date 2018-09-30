@@ -30,18 +30,7 @@ if __name__ == '__main__':
 from shadowsocks.lib import shell
 from shadowsocks.core import service, client
 
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='[%m-%d %H:%M]',
-                    filename=os.path.join(log_dir, 'client.log'),
-                    filemode='w')
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-console.setFormatter(formatter)
-logging.getLogger('').addHandler(console)
-
+logger = logging.getLogger('shadowsocksr')
 
 def main():
     shell.check_python()
@@ -56,11 +45,13 @@ def main():
     s = service.Service()
     # FIXME: somehow a daemon cannot be killed, and cannot connect to it
     if not s.is_running():
-        logging.info('starting service')
+        logger.info('starting service')
         s.start()
     else:
-        logging.info('service already started')
+        logger.info('service already started')
     # s.start()
+    global logger
+    logger.error('started')
     client.Client().start()
 
 

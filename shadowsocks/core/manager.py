@@ -28,6 +28,8 @@ import collections
 from shadowsocks.core import common, eventloop, tcprelay, udprelay, asyncdns
 from shadowsocks.lib import shell
 
+logger = logging.getLogger('shadowsocksr')
+
 
 BUF_SIZE = 1506
 STAT_SEND_LIMIT = 50
@@ -53,7 +55,7 @@ class Manager(object):
                 if addrs:
                     family = addrs[0][0]
                 else:
-                    logging.error('invalid address: %s', manager_address)
+                    logger.error('invalid address: %s', manager_address)
                     exit(1)
             else:
                 addr = manager_address
@@ -63,8 +65,8 @@ class Manager(object):
             self._control_socket.bind(addr)
             self._control_socket.setblocking(False)
         except (OSError, IOError) as e:
-            logging.error(e)
-            logging.error('can not bind to manager address')
+            logger.error(e)
+            logger.error('can not bind to manager address')
             exit(1)
         self._loop.add(self._control_socket,
                        eventloop.POLL_IN, self)
@@ -82,10 +84,10 @@ class Manager(object):
         port = int(config['server_port'])
         servers = self._relays.get(port, None)
         if servers:
-            logging.error("server already exists at %s:%d" % (config['server'],
+            logger.error("server already exists at %s:%d" % (config['server'],
                                                               port))
             return
-        logging.info("adding server at %s:%d" % (config['server'], port))
+        logger.info("adding server at %s:%d" % (config['server'], port))
         t = tcprelay.TCPRelay(config, self._dns_resolver, False,
                               stat_callback=self.stat_callback)
         u = udprelay.UDPRelay(config, self._dns_resolver, False,
@@ -98,13 +100,13 @@ class Manager(object):
         port = int(config['server_port'])
         servers = self._relays.get(port, None)
         if servers:
-            logging.info("removing server at %s:%d" % (config['server'], port))
+            logger.info("removing server at %s:%d" % (config['server'], port))
             t, u = servers
             t.close(next_tick=False)
             u.close(next_tick=False)
             del self._relays[port]
         else:
-            logging.error("server not exist at %s:%d" % (config['server'],
+            logger.error("server not exist at %s:%d" % (config['server'],
                                                          port))
 
     def handle_event(self, sock, fd, event):
@@ -118,7 +120,7 @@ class Manager(object):
                     # let the command override the configuration file
                     a_config.update(config)
                 if 'server_port' not in a_config:
-                    logging.error('can not find server_port in config')
+                    logger.error('can not find server_port in config')
                 else:
                     if command == 'add':
                         self.add_port(a_config)
@@ -129,7 +131,7 @@ class Manager(object):
                     elif command == 'ping':
                         self._send_control_data(b'pong')
                     else:
-                        logging.error('unknown command %s', command)
+                        logger.error('unknown command %s', command)
 
     def _parse_command(self, data):
         # commands:
@@ -144,7 +146,7 @@ class Manager(object):
             config = shell.parse_json_in_str(config_json)
             return command, config
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
             return None
 
     def stat_callback(self, port, data_len):
@@ -249,7 +251,7 @@ def test():
     assert 8381 not in manager._relays
     data, addr = cli.recvfrom(1506)
     assert b'ok' in data
-    logging.info('add and remove test passed')
+    logger.info('add and remove test passed')
 
     # test statistics for TCP
     header = common.pack_addr(b'google.com') + struct.pack('>H', 80)
@@ -267,7 +269,7 @@ def test():
     data = data.split('stat:')[1]
     stats = shell.parse_json_in_str(data)
     assert '7001' in stats
-    logging.info('TCP statistics test passed')
+    logger.info('TCP statistics test passed')
 
     # test statistics for UDP
     header = common.pack_addr(b'127.0.0.1') + struct.pack('>H', 80)
@@ -283,7 +285,7 @@ def test():
     data = data.split('stat:')[1]
     stats = json.loads(data)
     assert '8382' in stats
-    logging.info('UDP statistics test passed')
+    logger.info('UDP statistics test passed')
 
     manager._loop.stop()
     t.join()

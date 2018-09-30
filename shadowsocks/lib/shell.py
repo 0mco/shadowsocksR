@@ -32,6 +32,23 @@ VERBOSE_LEVEL = 5
 
 verbose = 0
 
+logger = logging.getLogger('shadowsocksr')
+logger.setLevel(logging.DEBUG)
+# create file handler which logs even debug messages
+fh = logging.FileHandler('/tmp/shadowsocksr.log', mode='w')
+fh.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.ERROR)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(filename)s:%(lineno)s %(message)s',
+        datefmt='[%Y-%m-%d %H:%M:%S]')
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+# add the handlers to logger
+logger.addHandler(ch)
+logger.addHandler(fh)
+
 # SIGNAL1 is used to notify Service that current ssr network is poor;
 # SIGNAL2 is used to notify Network that current service has decided to switch ssr server.
 if sys.platform == 'win32':
@@ -42,7 +59,7 @@ else:
         SIGNAL1 = signal.SIGUSR1
         SIGNAL2 = signal.SIGUSR2
     except Exception:
-        logging.error('current os is not supported yet')
+        logger.error('current os is not supported yet')
 
 
 def check_python():
@@ -76,7 +93,7 @@ def startup_init():
 
 def print_exception(e):
     global verbose
-    logging.error(e)
+    logger.error(e)
     if verbose > 0:
         import traceback
         traceback.print_exc()
@@ -101,7 +118,7 @@ def print_shadowsocks():
 
 
 def log_shadowsocks_version():
-    logging.info('ShadowsocksR %s' % __version())
+    logger.info('ShadowsocksR %s' % __version())
 
 
 def find_config(cmd_mode=False):
@@ -131,13 +148,13 @@ def check_config(config, is_local):
         return
 
     if is_local and not config.get('password', None):
-        logging.error('password not specified')
+        logger.error('password not specified')
         print_help(is_local)
         sys.exit(2)
 
     if not is_local and not config.get('password', None) \
             and not config.get('port_password', None):
-        logging.error('password or port_password not specified')
+        logger.error('password or port_password not specified')
         print_help(is_local)
         sys.exit(2)
 
@@ -148,24 +165,24 @@ def check_config(config, is_local):
         config['server_port'] = int(config['server_port'])
 
     if config.get('local_address', '') in [b'0.0.0.0']:
-        logging.warning(
+        logger.warning(
             'warning: local set to listen on 0.0.0.0, it\'s not safe')
     if config.get('server', '') in ['127.0.0.1', 'localhost']:
-        logging.warning('warning: server set to listen on %s:%s, are you sure?'
+        logger.warning('warning: server set to listen on %s:%s, are you sure?'
                         % (to_str(config['server']), config['server_port']))
     if config.get('timeout', 300) < 100:
-        logging.warning('warning: your timeout %d seems too short' % int(
+        logger.warning('warning: your timeout %d seems too short' % int(
             config.get('timeout')))
     if config.get('timeout', 300) > 600:
-        logging.warning('warning: your timeout %d seems too long' % int(
+        logger.warning('warning: your timeout %d seems too long' % int(
             config.get('timeout')))
     if config.get('password') in [b'mypassword']:
-        logging.error('DON\'T USE DEFAULT PASSWORD! Please change it in your '
+        logger.error('DON\'T USE DEFAULT PASSWORD! Please change it in your '
                       'config.json!')
         sys.exit(1)
     if config.get('user', None) is not None:
         if os.name != 'posix':
-            logging.error('user can be used only on Unix')
+            logger.error('user can be used only on Unix')
             sys.exit(1)
 
     encrypt.try_cipher(config['password'], config['method'])
@@ -237,24 +254,22 @@ def parse_config(is_local, config_=None):
             config['forbidden_ip'] = \
                 IPNetwork(config.get('forbidden_ip', '127.0.0.0/8,::1/128'))
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
             sys.exit(2)
         try:
             config['forbidden_port'] = PortRange(
                 config.get('forbidden_port', ''))
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
             sys.exit(2)
         try:
             config['ignore_bind'] = \
                 IPNetwork(config.get('ignore_bind', '127.0.0.0/8,::1/128,10.0.0.0/8,192.168.0.0/16'))
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
             sys.exit(2)
     config['server_port'] = config.get('server_port', 8388)
 
-    logging.getLogger('').handlers = []
-    logging.addLevelName(VERBOSE_LEVEL, 'VERBOSE')
     if config['verbose'] >= 2:
         level = VERBOSE_LEVEL
     elif config['verbose'] == 1:
@@ -377,13 +392,13 @@ def parse_args(args_=None):
             #     config_path = find_config(False)
             # else:
             config_path = args.c
-            logging.debug('loading config from %s' % config_path)
+            logger.debug('loading config from %s' % config_path)
             with open(config_path, 'rb') as f:
                 try:
                     config = parse_json_in_str(
                         remove_comment(f.read().decode('utf8')))
                 except ValueError as e:
-                    logging.error('found an error in config.json: %s', str(e))
+                    logger.error('found an error in config.json: %s', str(e))
                     sys.exit(1)
     if config_path:
         config['config_path'] = config_path

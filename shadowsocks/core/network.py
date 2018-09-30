@@ -9,6 +9,8 @@ import sys
 import signal
 
 
+logger = logging.getLogger('shadowsocksr')
+
 class Network:
     pass
 
@@ -34,14 +36,14 @@ class ClientNetwork(Network):
         # TODO: what would happen if more than one server added to the eventloop?
         self.config.append(config)
 
-        logging.info('creating tcp, udp relay')
+        logger.info('creating tcp, udp relay')
         tcp_server = tcprelay.TCPRelay(config, self.dns_resolver, True)
-        logging.info('TCPRelay created')
+        logger.info('TCPRelay created')
         udp_server = udprelay.UDPRelay(config, self.dns_resolver, True)
-        logging.info('UDPRelay created')
+        logger.info('UDPRelay created')
         tcp_server.add_to_loop(self.loop)
         udp_server.add_to_loop(self.loop)
-        logging.info('tcprelay, udprelay added to loop')
+        logger.info('tcprelay, udprelay added to loop')
         self.servers.append((config, tcp_server, udp_server))
 
     def start(self):
@@ -49,7 +51,7 @@ class ClientNetwork(Network):
         # we can only start an eventloop, you need to stop the running
         # eventloop first to start.
         if self.loop_thread is not None:
-            logging.error('already started')
+            logger.error('already started')
             return
         assert self.loop is not None
         config = self.config[-1]
@@ -57,12 +59,12 @@ class ClientNetwork(Network):
         if not config.get('dns_ipv6', False):
             asyncdns.IPV6_CONNECTION_SUPPORT = False
 
-        logging.info(
+        logger.info(
             "local start with protocol [%s] password [%s] method [%s] obfs [%s] obfs_param [%s]"
             % (config['protocol'], config['password'], config['method'], config['obfs'], config['obfs_param']))
 
         try:
-            logging.info("starting local at %s:%d" % (config['local_address'], config['local_port']))
+            logger.info("starting local at %s:%d" % (config['local_address'], config['local_port']))
 
             daemon.set_user(config.get('user', None))
 
@@ -79,7 +81,7 @@ class ClientNetwork(Network):
         """close tcp_server, udp_server."""
         print(self.loop_thread, self.loop.is_running())
         if (not self.loop_thread) or (not self.loop.is_running()):
-            logging.error('network not started')
+            logger.error('network not started')
             return
         # FIXME: what about really stop it?
         if len(self.servers) == 0:
@@ -91,7 +93,7 @@ class ClientNetwork(Network):
                 self.servers.pop(i)
                 tcp_server.close()     # it itself will remove itself from eventloop
                 udp_server.close()
-                logging.info('server removed')
+                logger.info('server removed')
                 removed = True
         if not removed:
             print('server not found')
@@ -107,7 +109,7 @@ class ClientNetwork(Network):
     def resume(self):
         # this naming is kind of misleading, since we just resume from pausing state
         if not self.loop.is_paused():
-            logging.error('network not paused')
+            logger.error('network not paused')
             return
         self.loop.resume()
         print('network resumed')
@@ -117,7 +119,7 @@ class ClientNetwork(Network):
         self.remove(self.servers[-1][0])
         # FIXME: why if we remove print here, it will throw address already in use error?
         # That's weird, or just a miracle?
-        # logging.info('print it to prevent address already in use error')
+        # logger.info('print it to prevent address already in use error')
         self.add(config)
         self.resume()
 
@@ -155,7 +157,7 @@ class ClientNetwork(Network):
 
     def _throw_network_error_signal(self):
         # os.kill(os.getpid(), shell.SIGNAL1)
-        logging.error('network error')
+        logger.error('network error')
         pass
 
     def ping(self, host, port, with_socks=False):
@@ -197,7 +199,7 @@ class ClientNetwork(Network):
         """this is for windows timer check."""
         time.sleep(self.alarm_period)
         if not self.connectivity():
-            logging.error('Network error detected, tring to switch a server')
+            logger.error('Network error detected, tring to switch a server')
             # self._throw_network_error_signal()
             # TODO:
             # we directly switch here, do not send signal to service.

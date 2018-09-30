@@ -27,6 +27,9 @@ import re
 from shadowsocks.core import lru_cache
 
 
+logger = logging.getLogger('shadowsocksr')
+
+
 def compat_ord(s):
     if type(s) == int:
         return s
@@ -44,7 +47,7 @@ _chr = chr
 ord = compat_ord
 chr = compat_chr
 
-connect_log = logging.debug
+connect_log = logger.debug
 
 
 def to_bytes(s):
@@ -172,7 +175,7 @@ def pre_parse_header(data):
             return None
         rand_data_size = ord(data[1])
         if rand_data_size + 2 >= len(data):
-            logging.warn('header too short, maybe wrong password or '
+            logger.warn('header too short, maybe wrong password or '
                          'encryption method')
             return None
         data = data[rand_data_size + 2:]
@@ -183,7 +186,7 @@ def pre_parse_header(data):
             return None
         rand_data_size = struct.unpack('>H', data[1:3])[0]
         if rand_data_size + 3 >= len(data):
-            logging.warn('header too short, maybe wrong password or '
+            logger.warn('header too short, maybe wrong password or '
                          'encryption method')
             return None
         data = data[rand_data_size + 3:]
@@ -195,7 +198,7 @@ def pre_parse_header(data):
         data = data[:data_size]
         crc = binascii.crc32(data) & 0xffffffff
         if crc != 0xffffffff:
-            logging.warn('uncorrect CRC32, maybe wrong password or '
+            logger.warn('uncorrect CRC32, maybe wrong password or '
                          'encryption method')
             return None
         start_pos = 3 + ord(data[3])
@@ -218,7 +221,7 @@ def parse_header(data):
             dest_port = struct.unpack('>H', data[5:7])[0]
             header_length = 7
         else:
-            logging.warn('header is too short')
+            logger.warn('header is too short')
     elif addrtype == ADDRTYPE_HOST:
         if len(data) > 2:
             addrlen = ord(data[1])
@@ -228,18 +231,18 @@ def parse_header(data):
                                           data[2 + addrlen:4 + addrlen])[0]
                 header_length = 4 + addrlen
             else:
-                logging.warn('header is too short')
+                logger.warn('header is too short')
         else:
-            logging.warn('header is too short')
+            logger.warn('header is too short')
     elif addrtype == ADDRTYPE_IPV6:
         if len(data) >= 19:
             dest_addr = socket.inet_ntop(socket.AF_INET6, data[1:17])
             dest_port = struct.unpack('>H', data[17:19])[0]
             header_length = 19
         else:
-            logging.warn('header is too short')
+            logger.warn('header is too short')
     else:
-        logging.warn('unsupported addrtype %d, maybe wrong password or '
+        logger.warn('unsupported addrtype %d, maybe wrong password or '
                      'encryption method' % addrtype)
     if dest_addr is None:
         return None
@@ -275,7 +278,7 @@ class IPNetwork(object):
             while (ip & 1) == 0 and ip is not 0:
                 ip >>= 1
                 prefix_size += 1
-            logging.warn("You did't specify CIDR routing prefix size for %s, "
+            logger.warn("You did't specify CIDR routing prefix size for %s, "
                          "implicit treated as %s/%d" % (addr, addr, addr_len))
         elif block[1].isdigit() and int(block[1]) <= addr_len:
             prefix_size = addr_len - int(block[1])
@@ -336,7 +339,7 @@ class PortRange(object):
                         self.range.add(i)
                         i += 1
             except Exception as e:
-                logging.error(e)
+                logger.error(e)
 
     def __contains__(self, val):
         return val in self.range
@@ -373,13 +376,13 @@ class UDPAsyncDNSHandler(object):
 
     def _handle_dns_resolved(self, result, error):
         if error:
-            logging.error("%s when resolve DNS" % (error, ))  #drop
+            logger.error("%s when resolve DNS" % (error, ))  #drop
             return self.call_back(error, self.remote_addr, None, self.params)
         if result:
             ip = result[1]
             if ip:
                 return self.call_back("", self.remote_addr, ip, self.params)
-        logging.warning("can't resolve %s" % (self.remote_addr, ))
+        logger.warning("can't resolve %s" % (self.remote_addr, ))
         return self.call_back("fail to resolve", self.remote_addr, None,
                               self.params)
 

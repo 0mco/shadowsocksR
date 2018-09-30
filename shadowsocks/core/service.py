@@ -20,6 +20,7 @@ from contextlib import redirect_stdout
 from contextlib import redirect_stderr
 import argparse
 
+logger = logging.getLogger('shadowsocksr')
 # TODO: move config to config/global.py
 HOST = '127.0.0.1'
 PORT = 6113
@@ -54,7 +55,7 @@ class Service:
         class RequestHandler(socketserver.BaseRequestHandler):
             def handle(self):
                 nonlocal service
-                logging.info("new client:")
+                logger.info("new client:")
                 # logging.info("new client:", addr)
                 while True:
                     try:
@@ -77,7 +78,7 @@ class Service:
                                             config_path = shell.find_config(True)
                                         # In cmd mode, we always load config from config file.
                                         # And we intentionally do not parse_config for possibly missing some arguments.
-                                        logging.debug('loading config from: {}'.format(config_path))
+                                        logger.debug('loading config from: {}'.format(config_path))
                                         service.config_manager = ClientConfigManager(config_path)
                                         # TODO: check update after connection is established
                                         # if service.config_manager.get_auto_update_config() and \
@@ -105,7 +106,7 @@ class Service:
                         self.request.sendall((resp + str(e)).encode('utf-8'))
                         print(e)
 
-        logging.info("binding on %s:%d" % (self.host, self.port))
+        logger.info("binding on %s:%d" % (self.host, self.port))
         try:
             # server = socketserver.TCPServer((self.host, self.port), RequestHandler)
             server = ThreadedTCPServer((self.host, self.port), RequestHandler)
@@ -124,7 +125,7 @@ class Service:
             # uncomment
             signal.alarm(self.alarm_period)
         except socket.error as e:
-            logging.error(str(e))
+            logger.error(str(e))
             if e.errno != errno.EADDRINUSE:
                 raise
         except Exception as e:
@@ -171,7 +172,7 @@ class Service:
             try:
                 servers.extend(fetch_ssr(addr))
             except Exception:
-                logging.error('fetching server list in {} failed'.format(addr))
+                logger.error('fetching server list in {} failed'.format(addr))
         servers = self.get_server_list(
         ) + servers  # 把本地的server列表(已經去重)放在前面，去重的時候效率更高
 
@@ -228,7 +229,7 @@ class Service:
             #     self._throw_network_error_signal()
 
             if not self.connectivity():
-                logging.info(
+                logger.info(
                     'Network error detected, trying to switch a server')
                 self._throw_network_error_signal()
             signal.alarm(self.alarm_period)
