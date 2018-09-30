@@ -10,29 +10,27 @@ import signal
 
 
 class Network:
-    def singnal1_handler(self, signum, frame):
-        pass
-
-    def singnal2_handler(self, signum, frame):
-        pass
+    pass
 
 
 class ClientNetwork(Network):
-    def __init__(self, config, alarm_period=20):
+    def __init__(self, config=None, alarm_period=20):
         # initialize dns_resolver, loop
         self.tcp_server = None
         self.udp_server = None
         self.dns_resolver = None
         self.loop = None
         self.config = None
+        self.loop_thread = None
         self.alarm_period = alarm_period
         self.loop = eventloop.EventLoop()
         self.dns_resolver = asyncdns.DNSResolver()
         self.dns_resolver.add_to_loop(self.loop)
         if config is not None:
-            self.init(config)
+            self.add(config)
 
-    def init(self, config):
+    def add(self, config):
+        # TODO: what would happen if more than one server added to the eventloop?
         self.config = config
         self.tcp_server = tcprelay.TCPRelay(config, self.dns_resolver, True)
         self.udp_server = udprelay.UDPRelay(config, self.dns_resolver, True)
@@ -40,6 +38,12 @@ class ClientNetwork(Network):
         self.udp_server.add_to_loop(self.loop)
 
     def start(self):
+        # since we have no good method to stop a thread, so we demand that
+        # we can only start an eventloop, you need to stop the running
+        # eventloop first to start.
+        if self.loop_thread is not None:
+            logging.error('already started')
+            return
         assert self.loop is not None
         config = self.config
 
@@ -48,19 +52,19 @@ class ClientNetwork(Network):
 
         logging.info(
             "local start with protocol [%s] password [%s] method [%s] obfs [%s] obfs_param [%s]"
-            % (config['protocol'], config['password'], config['method'],
-               config['obfs'], config['obfs_param']))
+            % (config['protocol'], config['password'], config['method'], config['obfs'], config['obfs_param']))
 
         try:
-            logging.info("starting local at %s:%d" % (config['local_address'],
-                                                      config['local_port']))
+            logging.info("starting local at %s:%d" % (config['local_address'], config['local_port']))
 
-            signal.signal(getattr(signal, 'SIGQUIT', signal.SIGTERM), self.manager)
-            signal.signal(signal.SIGINT, self.manager)
+            # uncomment
+            # signal.signal(getattr(signal, 'SIGQUIT', signal.SIGTERM), self.manager)
+            # signal.signal(signal.SIGINT, self.manager)
 
             daemon.set_user(config.get('user', None))
 
-            signal.signal(shell.SIGNAL2, self.manager)
+            # uncomment
+            # signal.signal(shell.SIGNAL2, self.manager)
 
             if sys.platform == 'win32':
                 # set timer for Windows:
@@ -68,44 +72,59 @@ class ClientNetwork(Network):
             else:
                 # set timer for unix-like system:
                 # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
-                signal.signal(signal.SIGALRM, self.manager)
+
+                # uncomment
+                # signal.signal(signal.SIGALRM, self.manager)
+
                 # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
                 # 避免檢查時間過長導致段時間內高頻率檢查
                 # signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.manager)
-                signal.alarm(self.alarm_period)
+
+                # uncomment
+                # signal.alarm(self.alarm_period)
+                pass
 
             threading.Thread(target=self.loop.run).start()
             latency = self.ping(config['server'], int(config['server_port']))
+            print('network started')
             print('latency: {}'.format(latency))
         except Exception as e:
             shell.print_exception(e)
             sys.exit(1)
 
-    def stop(self):        # TODO: use only one single to toggle pause/resume
+    def stop(self):  # TODO: use only one single to toggle pause/resume
         """close tcp_server, udp_server."""
-        os.kill(os.getpid(), shell.SIGNAL2)
+        if (not self.loop_thread) or self.loop.is_stopped():
+            logging.error('network not started')
+            return
+        # FIXME: what about really stop it?
+        self.loop.pause()       # we just pause it, not really stop it
+        self.tcp_server.close()     # it itself will remove itself from eventloop
+        self.udp_server.close()
+        logging.info('network stopped')
 
     def restart(self):
-        os.kill(os.getpid(), shell.SIGNAL2)
+        # this naming is kind of misleading, since we just resume from pausing state
+        self.loop.resume()
+        print('network restarted')
 
     def switch(self, config):
         self.stop()
         # FIXME: why if we remove print here, it will throw address already in use error?
         # That's weird, or just a miracle?
-        # print('print it to prevent address already in use error')
-        logging.info('print it to prevent address already in use error')
-        self.init(config)
+        # logging.info('print it to prevent address already in use error')
+        self.add(config)
         self.restart()
 
     def manager(self, signum, frame):
         # TODO: SIGNAL1 to toggle loop status, for saving limited SIGNAL numbers.
         # SIGNAL1 is for client to updat config, SIGNAL2 is for network to switch connection.
-        if signum == shell.SIGNAL2:        # pause eventloop.
+        if signum == shell.SIGNAL2:  # pause eventloop.
             if self.loop.is_paused():
                 self.loop.resume()
             else:
                 self.loop.pause()
-                self.tcp_server.close()       # test use, just pause, not stop
+                self.tcp_server.close()  # test use, just pause, not stop
                 self.udp_server.close()
         elif signum == signal.SIGQUIT or signum == signal.SIGTERM:
             logging.warn('received SIGQUIT, doing graceful shutting down..')
@@ -122,7 +141,8 @@ class ClientNetwork(Network):
             #     self._throw_network_error_signal()
 
             if not self.connectivity():
-                logging.info('Network error detected, trying to switch a server')
+                logging.info(
+                    'Network error detected, trying to switch a server')
                 self._throw_network_error_signal()
             signal.alarm(self.alarm_period)
 
@@ -143,7 +163,8 @@ class ClientNetwork(Network):
                 try:
                     s.connect((host, 80))
                     start_time = time.time()
-                    s.sendall('GET / HTTP/1.1\nHost: {}\n\n'.format(host).encode('utf-8'))
+                    s.sendall('GET / HTTP/1.1\nHost: {}\n\n'.format(host)
+                              .encode('utf-8'))
                     data = s.recv(1)
                     if data:
                         # print(data, time.time() - start_time)
@@ -167,7 +188,8 @@ class ClientNetwork(Network):
             # s.setblocking(False)
             if with_socks is True:
                 # s.set_proxy(socks.SOCKS5, '127.0.0.1', 1080)        # TODO: change to local addr/port
-                s.set_proxy(socks.SOCKS5, self.config['local_address'], self.config['local_port'])
+                s.set_proxy(socks.SOCKS5, self.config['local_address'],
+                            self.config['local_port'])
             s.settimeout(2)
             # TODO: 解析ip，避免將解析ip的時間加入
             try:
@@ -222,7 +244,7 @@ def ping(host, port):
             pass
         finally:
             s.close()
-    if not latency:             # return inf if can not connect
+    if not latency:  # return inf if can not connect
         return float('inf')
     else:
         return 1000 * sum(latency) / len(latency)

@@ -43,12 +43,12 @@ class BaseCommands:
         if cmd in self.SUBCMDS:
             self.SUBCMDS[cmd]()
         else:
-            self._wrong_cmd()
+            self._cmd_error()
 
-    def _wrong_cmd(self):
+    def _cmd_error(self):
         """handler fo wrong command, override by subclass."""
         print('command `{}` is not implemented yet'.format(self.cmd))
-        print('those commands are currently implemented:',
+        print('currently implemented commands:',
               *self.SUBCMDS.keys())
 
 
@@ -116,14 +116,15 @@ class ServerCommands(BaseCommands):
         print('all ssr tested')
 
     def switch(self):
-        import os
-        pid = daemon.get_daemon_pid()
-        if pid is not None:
-            os.kill(pid,
-                    shell.SIGNAL1)  # notify process with this pid to switch
-            # FIXME: it will switch only when autoswitch is set :(
-        else:
-            print('daemon not started')
+        self.target.random_switch_ssr()
+        # import os, sys
+        # pid = daemon.get_daemon_pid()
+        # if pid is not None:
+        #     # this got blocked somehow
+        #     os.kill(pid, shell.SIGNAL1)  # notify process with this pid to switch
+        #     # FIXME: it will switch only when autoswitch is set :(
+        # else:
+        #     print('daemon not started')
 
     def connect(self):
         target = self.target
@@ -137,18 +138,25 @@ class ServerCommands(BaseCommands):
     def start(self):
         target = self.target
         ssr = target.get_server_list()[0]
-        if self.args.addr:
-            ssr = target.get_server_by_addr(self.args.addr)
+        # FIXME: why this would spend so much time?!
+        # if self.args.addr:
+        #     ssr = target.get_server_by_addr(self.args.addr)
 
         config_from_link = decode_ssrlink(ssr)
         config = shell.parse_config(True, config_from_link)
         target.config = config
         target.server_link = ssr
-        if self.args.d:
-            daemon.daemon_start()
+        # if self.args.d:
+        #     daemon.daemon_start()
         print_server_info(target.config, verbose=True, hightlight=True)
+        # print("starting:\n", self.target.config, self.target.server_link)
         target.network = network.ClientNetwork(target.config)
         target.network.start()
+
+    def quit(self):
+        """quit the daemon"""
+        # exit(0)
+        pass
 
     def add(self):
         if self.args.L:
@@ -178,7 +186,8 @@ class ServerCommands(BaseCommands):
         pass
 
     def stop(self):
-        daemon.daemon_stop()
+        # daemon.daemon_stop()
+        self.target.network.stop()
 
     def restart(self):
         self.stop()
@@ -186,7 +195,7 @@ class ServerCommands(BaseCommands):
 
     def status(self):
         """print network information (ping/connectivity) of servers."""
-        pass
+        print(self.target.config, self.target.server_link)
 
     def rediscover(self):
         target = self.target

@@ -159,6 +159,7 @@ class EventLoop(object):
         self._fdmap = {}  # (f, handler)
         self._last_time = time.time()
         self._periodic_callbacks = []
+        self._started = False
         self._stopping = False
         self._paused = False            # indicate really stop or just pause when self._stopping is set.
         logging.debug('using event model: %s', model)
@@ -192,22 +193,38 @@ class EventLoop(object):
         self._impl.modify(fd, mode)
 
     def pause(self):
+        assert self._started and not (self._stopping and not self._paused)
         logging.debug('pausing eventloop')
         self._paused = True
         self._stopping = True
 
     def resume(self):
+        assert self._started and self._stopping and self._paused
         logging.debug('resuming eventloop')
         self._paused = False
         self._stopping = False
 
     def stop(self):
+        """if _pause is set, that means this loop is paused, not stopped,
+        this is some legacy code, I don't want to touch it now."""
+        assert self._started and not self._stopping
         self._stopping = True
+        self._paused = False
+        self._started = False
 
     def is_paused(self):
-        return self._paused
+        return self._started and self._paused and self._stopping
+
+    def is_stopped(self):
+        # return self._started and self._stopping and not self._paused
+        return (not self._started) or (self._stopping and not self._paused)
+
+    def is_started(self):
+        return self._started
 
     def run(self):
+        assert not self._started
+        self._started = True
         events = []
         while True:
             while not self._stopping:
@@ -247,6 +264,11 @@ class EventLoop(object):
                 break
             time.sleep(0.1)
         logging.debug('loop exited')
+        # TODO: remove print
+        print('loop exited')
+
+        import sys
+        print('eventloop exited', file=sys.stderr)
 
     def __del__(self):
         self._impl.close()

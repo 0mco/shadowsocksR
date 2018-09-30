@@ -53,8 +53,14 @@ def main():
         p = os.path.dirname(os.path.realpath(sys.executable))
         os.chdir(p)
 
-    client = service.Client()
-    client.start()
+    s = service.Service()
+    if not s.is_running():
+        logging.info('starting daemon')
+        s.start()
+    else:
+        logging.info('daemon already started')
+    # s.start()
+    service.Client().start()
 
 
 if __name__ == '__main__':

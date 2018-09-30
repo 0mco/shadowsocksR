@@ -30,7 +30,8 @@ check_config()
 
 
 def load_before_read(func):
-    """load config from file every read operation to make sure everything is up-to-date (though it cannot really ensure that)."""
+    """load config from file every read operation to make sure everything \
+       is up-to-date (though it cannot really ensure that)."""
     # FIXME: read/write safe when multi-processing
     def decorated(self, *args, **kwargs):
         if self._hold is False:

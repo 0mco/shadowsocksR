@@ -288,103 +288,27 @@ def parse_args(args_=None):
 
     parser = argparse.ArgumentParser(
         description='A fast tunnel proxy that helps you bypass firewalls.',
-        usage='ssclient command [OPTION]',
+        usage='ssclient <command> [OPTION]',
         epilog='Online help: <https://github.com/shadowsocks/shadowsocks>')
     # TODO: add conflicts of -L with others.
     # default to old version config path, if args.command is set, change it to new version config path
-    parser.add_argument('-c', metavar='CONFIG', help='path to config file')
     parser.add_argument('-s', metavar='SERVER_ADDR', help='server address')
     parser.add_argument(
         '-p', metavar='SERVER_PORT', help='server port', default='8388')
-    parser.add_argument(
-        '-b', metavar='LOCAL_ADDR', help='local address', default='127.0.0.1')
-    parser.add_argument(
-        '-l', metavar='LOCAL_PORT', help='local port', default='1080')
     parser.add_argument('-k', metavar='PASSWORD', help='password')
-    parser.add_argument(
-        '-m',
-        metavar='METHOD',
-        help='encryption method',
-        default='aes-256-cfb')
-    parser.add_argument(
-        '-O', metavar='PROTOCOL', help='protocol', default='http_simple')
-    parser.add_argument(
-        '-G', metavar='PROTOCOL_PARAM', help='protocol param', default='')
-    parser.add_argument(
-        '-o', metavar='OBFS', help='obfsplugin', default='http_simple')
-    parser.add_argument(
-        '-g', metavar='OBFS_PARAM', help='obfs param', default='')
-    parser.add_argument(
-        '-L', metavar='SSR_LINK', help='connect using ssr link')
-    parser.add_argument(
-        '-t', metavar='TIMEOUT', help='timeout in seconds', default=300)
-    parser.add_argument(
-        '--fast-open',
-        action='store_true',
-        help='use TCP_FAST_OPEN, requires Linux 3.7+')
-    parser.add_argument(
-        '-d',
-        metavar='',
-        help='daemon mode (start/stop/restart)',
-        choices=['start', 'stop', 'restart'])
-    parser.add_argument(
-        '--pid-file', metavar='PID_FILE', help='pid file for daemon mode')
-    parser.add_argument(
-        '--log-file', metavar='LOG_FILE', help='log file daemon mode')
-    parser.add_argument('--user', metavar='USER', help='run as user')
-    parser.add_argument('--workers', metavar='WORKERS', default=1)
-    parser.add_argument(
-        '-v', '-vv', action='count', help='verbose mode', default=0)
-    parser.add_argument('-q', '-qq', action='count', help='quiet mode')
-    parser.add_argument(
-        '--version', metavar='version', help='show version information')
+    parser.add_argument('-m', metavar='METHOD', help='encryption method', default='aes-256-cfb')
+    parser.add_argument('-O', metavar='PROTOCOL', help='protocol', default='http_simple')
+    parser.add_argument('-G', metavar='PROTOCOL_PARAM', help='protocol param', default='')
+    parser.add_argument('-o', metavar='OBFS', help='obfsplugin', default='http_simple')
+    parser.add_argument('-g', metavar='OBFS_PARAM', help='obfs param', default='')
 
-    subparsers = parser.add_subparsers(dest='command', help='sub-commands')
+    subparsers = parser.add_subparsers(title='command title', dest='command', help='sub-commands', metavar='<command>')
     server_parser = subparsers.add_parser('server', help='xxx')
     feed_parser = subparsers.add_parser('feed', help='yyy')
     status_parser = subparsers.add_parser('status', help='show current status')
     config_parser = subparsers.add_parser('config', help='yyy')
 
     server_parser.add_argument('subcmd', help='server command')
-    server_parser.add_argument(
-        '-d', action='store_true',
-        help='daemon mode (start/stop/restart)',
-        )
-
-    server_parser.add_argument('-c', metavar='CONFIG', help='path to config file')
-    server_parser.add_argument('-s', metavar='SERVER_ADDR', help='server address')
-    server_parser.add_argument(
-        '-p', metavar='SERVER_PORT', help='server port', default='8388')
-    server_parser.add_argument(
-        '-b', metavar='LOCAL_ADDR', help='local address', default='127.0.0.1')
-    server_parser.add_argument(
-        '-l', metavar='LOCAL_PORT', help='local port', default='1080')
-    server_parser.add_argument('-k', metavar='PASSWORD', help='password')
-    server_parser.add_argument(
-        '-m',
-        metavar='METHOD',
-        help='encryption method',
-        default='aes-256-cfb')
-    server_parser.add_argument(
-        '-O', metavar='PROTOCOL', help='protocol', default='http_simple')
-    server_parser.add_argument(
-        '-G', metavar='PROTOCOL_PARAM', help='protocol param', default='')
-    server_parser.add_argument(
-        '-o', metavar='OBFS', help='obfsplugin', default='http_simple')
-    server_parser.add_argument(
-        '-g', metavar='OBFS_PARAM', help='obfs param', default='')
-    server_parser.add_argument(
-        '-L', metavar='SSR_LINK', help='connect using ssr link')
-    server_parser.add_argument(
-        '-t', metavar='TIMEOUT', help='timeout in seconds', default=300)
-    server_parser.add_argument(
-        '--fast-open',
-        action='store_true',
-        help='use TCP_FAST_OPEN, requires Linux 3.7+')
-    server_parser.add_argument('--user', metavar='USER', help='run as user')
-    server_parser.add_argument('--workers', metavar='WORKERS', default=1)
-    server_parser.add_argument('--addr', help='server address')
-
 
     feed_parser.add_argument(
         '--link', help='ssr link')  # TODO: if no link, ask later.
@@ -392,13 +316,45 @@ def parse_args(args_=None):
     feed_parser.add_argument('--source', help='souurce address')
     # status_parser.add_argument('subcmd', help='show current status')
     config_parser.add_argument('subcmd', help='show current status')
-    config_parser.add_argument('-c', help='path to the import config file')
+    # config_parser.add_argument('-c', help='path to the import config file')
     config_parser.add_argument('-o', help='path to the :xport config file')
 
-    if args_:
-        args = parser.parse_args(args_)
-    else:
-        args = parser.parse_args()
+    for p in (parser, server_parser, feed_parser, status_parser, config_parser):
+        p.add_argument('-b', metavar='LOCAL_ADDR', help='local address', default='127.0.0.1')
+        p.add_argument('-l', metavar='LOCAL_PORT', help='local port', default='1080')
+        p.add_argument('-i', action='store_true', help='start in interactive mode')
+        p.add_argument('-c', metavar='CONFIG', help='path to config file')
+        p.add_argument('-L', metavar='SSR_LINK', help='connect using ssr link')
+        p.add_argument('-t', metavar='TIMEOUT', help='timeout in seconds', default=300)
+        p.add_argument('--fast-open', action='store_true', help='use TCP_FAST_OPEN, requires Linux 3.7+')
+        # p.add_argument('-d', metavar='', help='daemon mode (start/stop/restart)', choices=['start', 'stop', 'restart'])
+        # TODO: change help message about daemon, we don't need stop/restart option now
+        p.add_argument('-d', action='store_true', help='daemon mode (start/stop/restart)')
+        p.add_argument('--version', help='show version information', action='store_true')
+        p.add_argument('--pid-file', metavar='PID_FILE', help='pid file for daemon mode')
+        p.add_argument('--log-file', metavar='LOG_FILE', help='log file daemon mode')
+        p.add_argument('--user', metavar='USER', help='run as user')
+        p.add_argument('--workers', metavar='WORKERS', default=1)
+        p.add_argument('-v', '-vv', action='count', help='verbose mode', default=0)
+        # TODO: remove quiet mode
+        p.add_argument('-q', '-qq', action='count', help='quiet mode')
+
+    try:
+        if args_:
+            # args = parser.parse_args(args_)
+            args = parser.parse_known_args(args_)[0]
+        else:
+            args = parser.parse_known_args()[0]
+            # args = parser.parse_args()
+    # except argparse.ArgumentParser as e:
+    # we cannot catch argparse.ArgumentParser since it does not inherit from BaseException,
+    # when errors in args is founded, argparse just raise SystemExit, this is horrible,
+    # we really need to handle the exception to stop daemon from exit.
+    except SystemExit as e:
+        # TODO: add subcommand `help`, and `help` message
+        # args = parser.parse_known_args(['-h'])[0]
+        args = parser.parse_known_args(['feed', 'list'])[0]
+        pass
 
     global verbose
     global config
@@ -409,7 +365,7 @@ def parse_args(args_=None):
         level=logging.INFO, format='%(levelname)-s: %(message)s')
     if args.version:
         print_shadowsocks()
-        sys.exit(0)
+        # sys.exit(0)
 
     if args.c:
         # FIXME: enable default config_path
@@ -518,6 +474,7 @@ Proxy options:
 General options:
   -h, --help             show this help message and exit
   -d start/stop/restart  daemon mode
+  -i                     start in interactive mode
   --pid-file PID_FILE    pid file for daemon mode
   --log-file LOG_FILE    log file for daemon mode
   --user USER            username to run as
