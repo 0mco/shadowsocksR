@@ -150,8 +150,13 @@ class ServerCommands(BaseCommands):
         #     daemon.daemon_start()
         print_server_info(target.config, verbose=True, hightlight=True)
         # print("starting:\n", self.target.config, self.target.server_link)
-        target.network = network.ClientNetwork(target.config)
-        target.network.start()
+        if target.network is None:
+            print('creating ClientNetwork')
+            target.network = network.ClientNetwork(target.config)
+            target.network.start()
+        else:
+            print('ClientNetwork already exists')
+            target.network.add(target.config)
 
     def quit(self):
         """quit the daemon"""

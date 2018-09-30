@@ -216,7 +216,7 @@ class EventLoop(object):
         return self._started and self._paused and self._stopping
 
     def is_stopped(self):
-        # return self._started and self._stopping and not self._paused
+        """ stopped or just not started yet"""
         return (not self._started) or (self._stopping and not self._paused)
 
     def is_started(self):

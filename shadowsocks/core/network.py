@@ -32,10 +32,15 @@ class ClientNetwork(Network):
     def add(self, config):
         # TODO: what would happen if more than one server added to the eventloop?
         self.config = config
+
+        logging.info('creating tcp, udp relay')
         self.tcp_server = tcprelay.TCPRelay(config, self.dns_resolver, True)
+        logging.info('TCPRelay created')
         self.udp_server = udprelay.UDPRelay(config, self.dns_resolver, True)
+        logging.info('UDPRelay created')
         self.tcp_server.add_to_loop(self.loop)
         self.udp_server.add_to_loop(self.loop)
+        logging.info('tcprelay, udprelay added to loop')
 
     def start(self):
         # since we have no good method to stop a thread, so we demand that
@@ -84,7 +89,8 @@ class ClientNetwork(Network):
                 # signal.alarm(self.alarm_period)
                 pass
 
-            threading.Thread(target=self.loop.run).start()
+            self.loop_thread = threading.Thread(target=self.loop.run)
+            self.loop_thread.start()
             latency = self.ping(config['server'], int(config['server_port']))
             print('network started')
             print('latency: {}'.format(latency))
@@ -94,6 +100,7 @@ class ClientNetwork(Network):
 
     def stop(self):  # TODO: use only one single to toggle pause/resume
         """close tcp_server, udp_server."""
+        print(self.loop_thread, self.loop.is_stopped())
         if (not self.loop_thread) or self.loop.is_stopped():
             logging.error('network not started')
             return
@@ -105,6 +112,9 @@ class ClientNetwork(Network):
 
     def restart(self):
         # this naming is kind of misleading, since we just resume from pausing state
+        if not self.loop.is_paused():
+            logging.error('network not paused')
+            return
         self.loop.resume()
         print('network restarted')
 

@@ -57,6 +57,8 @@ class Service:
                             request = self.request.recv(4096).decode('utf-8')
                             if not request:
                                 print('closed', file=sys.stderr)
+                                # FIXME:
+                                raise ConnectionResetError('peer closed')
                                 break
                             output = io.StringIO()
                             # with redirect_stderr(output):
@@ -86,6 +88,7 @@ class Service:
                             resp = output.getvalue()
                             resp += '\n[DONE]\n'
                             # TODO: async sending data to client
+                            # TODO: if resp not ending with '\n', add '\n' to the end of resp
                             self.request.sendall(resp.encode('utf-8'))
                             print(resp)
                             print('result sent', file=sys.stderr)
@@ -93,7 +96,8 @@ class Service:
                         print('peer closed', file=sys.stderr)
                         break
                     except Exception as e:
-                        self.request.sendall(str(e).encode('utf-8'))
+                        resp = output.getvalue()
+                        self.request.sendall((resp + str(e)).encode('utf-8'))
                         print(e)
 
         logging.info("binding on %s:%d" % (self.host, self.port))
