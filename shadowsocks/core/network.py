@@ -62,32 +62,7 @@ class ClientNetwork(Network):
         try:
             logging.info("starting local at %s:%d" % (config['local_address'], config['local_port']))
 
-            # uncomment
-            # signal.signal(getattr(signal, 'SIGQUIT', signal.SIGTERM), self.manager)
-            # signal.signal(signal.SIGINT, self.manager)
-
             daemon.set_user(config.get('user', None))
-
-            # uncomment
-            # signal.signal(shell.SIGNAL2, self.manager)
-
-            if sys.platform == 'win32':
-                # set timer for Windows:
-                threading.Thread(target=self.period_network_check).start()
-            else:
-                # set timer for unix-like system:
-                # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
-
-                # uncomment
-                # signal.signal(signal.SIGALRM, self.manager)
-
-                # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
-                # 避免檢查時間過長導致段時間內高頻率檢查
-                # signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.manager)
-
-                # uncomment
-                # signal.alarm(self.alarm_period)
-                pass
 
             self.loop_thread = threading.Thread(target=self.loop.run)
             self.loop_thread.start()
@@ -101,7 +76,7 @@ class ClientNetwork(Network):
     def stop(self):  # TODO: use only one single to toggle pause/resume
         """close tcp_server, udp_server."""
         print(self.loop_thread, self.loop.is_stopped())
-        if (not self.loop_thread) or self.loop.is_stopped():
+        if (not self.loop_thread) or self.loop.is_stopped() or self.loop.is_paused():
             logging.error('network not started')
             return
         # FIXME: what about really stop it?
@@ -125,36 +100,6 @@ class ClientNetwork(Network):
         # logging.info('print it to prevent address already in use error')
         self.add(config)
         self.restart()
-
-    def manager(self, signum, frame):
-        # TODO: SIGNAL1 to toggle loop status, for saving limited SIGNAL numbers.
-        # SIGNAL1 is for client to updat config, SIGNAL2 is for network to switch connection.
-        if signum == shell.SIGNAL2:  # pause eventloop.
-            if self.loop.is_paused():
-                self.loop.resume()
-            else:
-                self.loop.pause()
-                self.tcp_server.close()  # test use, just pause, not stop
-                self.udp_server.close()
-        elif signum == signal.SIGQUIT or signum == signal.SIGTERM:
-            logging.warn('received SIGQUIT, doing graceful shutting down..')
-            self.stop()
-        elif signum == signal.SIGINT:
-            sys.exit(1)
-
-        elif signum == signal.SIGALRM:
-            # print('received timer alarm', time.ctime())
-            # print('trying to ping baidu.com')
-            # latency = self.ping('www.baidu.com', True)
-            # print('latency to baidu.com is', latency)
-            # if latency is None:
-            #     self._throw_network_error_signal()
-
-            if not self.connectivity():
-                logging.info(
-                    'Network error detected, trying to switch a server')
-                self._throw_network_error_signal()
-            signal.alarm(self.alarm_period)
 
     def connectivity(self, hosts=None):
         """test connectivity to host (or hosts if iterable)."""
@@ -186,7 +131,9 @@ class ClientNetwork(Network):
         return False
 
     def _throw_network_error_signal(self):
-        os.kill(os.getpid(), shell.SIGNAL1)
+        # os.kill(os.getpid(), shell.SIGNAL1)
+        logging.error('network error')
+        pass
 
     def ping(self, host, port, with_socks=False):
         """return None if cannnot connect."""

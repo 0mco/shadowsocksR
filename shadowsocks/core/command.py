@@ -86,17 +86,11 @@ class ServerCommands(BaseCommands):
         ssrs = target.get_server_list()
         servers = [decode_ssrlink(ssr) for ssr in ssrs]
         header = ' ' * 40 + 'SERVER LIST' + ' ' * 40
-        print_server_info(
-            servers,
-            header=header,
-            indexed=True,
-            verbose=True,
-            hightlight=True)
+        print_server_info(servers, header=header, indexed=True, verbose=True, hightlight=True)
 
     def _test_switch(self):
         target = self.target
         # When network error, switch ssr randomly
-        # signal.signal(shell.SIGNAL1, self.random_switch_ssr)
         # test switch ssr
         ssrs = target.get_server_list()
         first = True
@@ -117,14 +111,6 @@ class ServerCommands(BaseCommands):
 
     def switch(self):
         self.target.random_switch_ssr()
-        # import os, sys
-        # pid = daemon.get_daemon_pid()
-        # if pid is not None:
-        #     # this got blocked somehow
-        #     os.kill(pid, shell.SIGNAL1)  # notify process with this pid to switch
-        #     # FIXME: it will switch only when autoswitch is set :(
-        # else:
-        #     print('daemon not started')
 
     def connect(self):
         target = self.target
@@ -191,7 +177,7 @@ class ServerCommands(BaseCommands):
         pass
 
     def stop(self):
-        # daemon.daemon_stop()
+        # FIXME: assert started first
         self.target.network.stop()
 
     def restart(self):

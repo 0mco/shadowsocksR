@@ -69,6 +69,8 @@ def write_pid_file(pid_file, pid):
     flags |= fcntl.FD_CLOEXEC
     r = fcntl.fcntl(fd, fcntl.F_SETFD, flags)
     assert r != -1
+    # TODO: use kill(0) for the pid in pid_file if the file exists
+
     # There is no platform independent way to implement fcntl(fd, F_SETLK, &fl)
     # via fcntl.fcntl. So use lockf instead
     try:
@@ -127,12 +129,13 @@ def daemon_start(pid_file=_default_pid_file, log_file=_default_log_file):
     os.kill(ppid, signal.SIGTERM)
 
     sys.stdin.close()
-    try:
-        freopen(log_file, 'a', sys.stdout)
-        freopen(log_file, 'a', sys.stderr)
-    except IOError as e:
-        shell.print_exception(e)
-        sys.exit(1)
+    # FIXME: redirect output to fd 12, instead of not closing stdout, stderr
+    # try:
+    #     freopen(log_file, 'a', sys.stdout)
+    #     freopen(log_file, 'a', sys.stderr)
+    # except IOError as e:
+    #     shell.print_exception(e)
+    #     sys.exit(1)
 
 
 def daemon_stop(pid_file=_default_pid_file):

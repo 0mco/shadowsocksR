@@ -22,7 +22,7 @@ import argparse
 
 # TODO: move config to config/global.py
 HOST = '127.0.0.1'
-PORT = 4113
+PORT = 6113
 
 
 class Service:
@@ -40,6 +40,10 @@ class Service:
 
     def start(self):
         service = self
+        args = shell.parse_args()
+        if args.d:
+            print('daemonizing')
+            daemon.daemon_start('/tmp/zzz.pid')
 
         class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
             def server_bind(self):
@@ -111,6 +115,10 @@ class Service:
                 raise
         except Exception as e:
             print(e)
+
+    def daemonize(self):
+        # TODO: change the pid file, and add dedaemonize
+        shell.daemon_start('/tmp/zzz.pid')
 
     def add_feed_source(self, addr):
         self.config_manager.add_subscription(addr)
@@ -186,17 +194,9 @@ class Service:
         ssrs = self.get_server_list()
         ssr = random.choice(ssrs)
         config_from_link = decode_ssrlink(ssr)
-        config = shell.parse_config(True, config_from_link)
-        print_server_info(config, verbose=True, hightlight=True)
-        self.network.switch(config)
-
-    def manager(self, signum, frame):
-        if signum == shell.SIGNAL1:  # network error signal
-            if self.config_manager.get_auto_switch_config():
-                # move this server to dead group
-                # self.config_manager.set_server_dead(self.server_link)
-                # switch ssr randomly if autoswitch is set.
-                self.random_switch_ssr()
+        self.config = shell.parse_config(True, config_from_link)
+        print_server_info(self.config, verbose=True, hightlight=True)
+        self.network.switch(self.config)
 
     def is_running(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -210,6 +210,33 @@ class Service:
             return True
         finally:
             sock.close()
+
+    def manager(self, signum, frame):
+        # set timer for unix-like system:
+        # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
+
+        # uncomment
+        # signal.signal(signal.SIGALRM, self.manager)
+
+        # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
+        # 避免檢查時間過長導致段時間內高頻率檢查
+        # signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.manager)
+
+        # uncomment
+        # signal.alarm(self.alarm_period)
+        if signum == signal.SIGALRM:
+            # print('received timer alarm', time.ctime())
+            # print('trying to ping baidu.com')
+            # latency = self.ping('www.baidu.com', True)
+            # print('latency to baidu.com is', latency)
+            # if latency is None:
+            #     self._throw_network_error_signal()
+
+            if not self.connectivity():
+                logging.info(
+                    'Network error detected, trying to switch a server')
+                self._throw_network_error_signal()
+            signal.alarm(self.alarm_period)
 
 
 class Client:
@@ -232,6 +259,7 @@ class Client:
         logging.info('connected to %s:%d' % (self.host, self.port))
 
     def start(self):
+        # FIXME: clear exception (SystemExit) when using ctrl-c to exit 
         args = shell.parse_args()
         if args.command:
             if args.c:
@@ -246,13 +274,19 @@ class Client:
             resp = self.request(cmd)
             print(*resp, sep='', end='')
             if not args.i:
+                if args.d:
+                    print('daemonizing')
+                    daemon.daemon_start('/tmp/y.pid')
                 return
             while True:
                 commands = input(">>> ")
                 if commands == 'quit' or commands == 'exit':
-                    exit(0)
+                    break
                 resp = self.request(commands)
                 print(*resp, sep='', end='')
+            if args.d:
+                print('daemonizing')
+                daemon.daemon_start()
 
         else:  # old procedure
             config = shell.parse_config(True)

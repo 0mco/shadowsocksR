@@ -54,6 +54,7 @@ def main():
         os.chdir(p)
 
     s = service.Service()
+    # FIXME: somehow a daemon cannot be killed, and cannot connect to it
     if not s.is_running():
         logging.info('starting daemon')
         s.start()
