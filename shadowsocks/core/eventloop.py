@@ -212,15 +212,11 @@ class EventLoop(object):
         self._paused = False
         self._started = False
 
+    def is_running(self):
+        return self._started and (not self._stopping)
+
     def is_paused(self):
         return self._started and self._paused and self._stopping
-
-    def is_stopped(self):
-        """ stopped or just not started yet"""
-        return (not self._started) or (self._stopping and not self._paused)
-
-    def is_started(self):
-        return self._started
 
     def run(self):
         assert not self._started

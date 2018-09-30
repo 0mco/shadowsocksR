@@ -194,7 +194,7 @@ def parse_config(is_local, config_=None):
     if config_:
         config.update(config_)
     else:
-        args = parse_args()
+        args = parse_args()[0]
 
     config['password'] = to_bytes(config.get('password', b''))
     config['method'] = to_str(config.get('method', 'aes-256-cfb'))
@@ -341,11 +341,9 @@ def parse_args(args_=None):
 
     try:
         if args_:
-            # args = parser.parse_args(args_)
-            args = parser.parse_known_args(args_)[0]
+            args, extra_args = parser.parse_known_args(args_)
         else:
-            args = parser.parse_known_args()[0]
-            # args = parser.parse_args()
+            args, extra_args = parser.parse_known_args()
     # except argparse.ArgumentParser as e:
     # we cannot catch argparse.ArgumentParser since it does not inherit from BaseException,
     # when errors in args is founded, argparse just raise SystemExit, this is horrible,
@@ -444,7 +442,7 @@ def parse_args(args_=None):
         config_from_ssrlink.update(config)
         config = config_from_ssrlink
 
-    return args
+    return (args, extra_args)
 
 
 def print_help(is_local):
@@ -593,11 +591,7 @@ def parse_json_in_str(data):
     return json.loads(data, object_hook=_decode_dict)
 
 
-def print_server_info(servers,
-                      header=None,
-                      indexed=False,
-                      verbose=False,
-                      hightlight=False):
+def print_server_info(servers, header=None, indexed=False, verbose=False, hightlight=False):
     # server = decode_ssrlink(ssr)
     if hightlight:
         print('*' * 100)

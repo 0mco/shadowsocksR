@@ -30,6 +30,7 @@ class Service:
         self.config_manager = None
         self.config = None
         self.server_link = None
+        self.alarm_period = 20
         self.network = None
         self.sock = None
         self.host = host
@@ -40,7 +41,7 @@ class Service:
 
     def start(self):
         service = self
-        args = shell.parse_args()
+        args = shell.parse_args()[0]
         if args.d:
             print('daemonizing')
             daemon.daemon_start('/tmp/zzz.pid')
@@ -68,7 +69,7 @@ class Service:
                             # with redirect_stderr(output):
                             with open('/dev/null', 'w'):
                                 with redirect_stdout(output):
-                                    args = shell.parse_args(request.split())
+                                    args, extra_args = shell.parse_args(request.split())
                                     if args.command:
                                         if args.c:
                                             config_path = args.c
@@ -87,7 +88,7 @@ class Service:
 
                                     print('executing: `%s %s`' % (args.command, args.subcmd), file=sys.stderr)
                                     # execute in another thread, and using pipe to async direct output another fd, and send the output async to client
-                                    command.Commands(args.command, service, args)
+                                    command.Commands(args.command, service, (args, extra_args))
                                     print('execute `%s %s` done' % (args.command, args.subcmd), file=sys.stderr)
                             resp = output.getvalue()
                             resp += '\n[DONE]\n'
@@ -109,6 +110,19 @@ class Service:
             # server = socketserver.TCPServer((self.host, self.port), RequestHandler)
             server = ThreadedTCPServer((self.host, self.port), RequestHandler)
             threading.Thread(target=server.serve_forever).start()
+
+            # set timer for unix-like system:
+            # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
+
+            # uncomment
+            signal.signal(signal.SIGALRM, self.manager)
+
+            # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
+            # 避免檢查時間過長導致段時間內高頻率檢查
+            # signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.manager)
+
+            # uncomment
+            signal.alarm(self.alarm_period)
         except socket.error as e:
             logging.error(str(e))
             if e.errno != errno.EADDRINUSE:
@@ -144,12 +158,7 @@ class Service:
             if server['server'] == addr:
                 return link
 
-    def print_server_list(self,
-                          ssrs,
-                          header=None,
-                          indexed=True,
-                          verbose=True,
-                          hightlight=True):
+    def print_server_list(self, ssrs, header=None, indexed=True, verbose=True, hightlight=True):
         shell.print_server_info((decode_ssrlink(link) for link in ssrs))
         for ssr in ssrs:
             server = decode_ssrlink(ssr)
@@ -170,7 +179,7 @@ class Service:
         while i >= 0:
             j = i - 1
             while 0 <= j < i < len(servers):
-                if ssrlink.is_duplicated(servers[i], servers[j]):
+                if ssrlink.ssrlink_equal(servers[i], servers[j]):
                     del servers[i]
                     break
                 else:
@@ -184,10 +193,7 @@ class Service:
             servers, header='*' * 20 + "SERVER LIST AFTER UPDATE" + '*' * 20)
 
     def switch_ssr(self, config):
-        self.network.pause()
-        import time
-        time.sleep(10)
-        self.network.resume()
+        pass
 
     def random_switch_ssr(self):
         import random
@@ -212,18 +218,7 @@ class Service:
             sock.close()
 
     def manager(self, signum, frame):
-        # set timer for unix-like system:
-        # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
-
-        # uncomment
-        # signal.signal(signal.SIGALRM, self.manager)
-
-        # NOTE: 每次執行完網絡檢查後在重新設置alarm，而不是設置固定的interval，
-        # 避免檢查時間過長導致段時間內高頻率檢查
-        # signal.setitimer(signal.ITIMER_REAL, self.alarm_period, self.manager)
-
-        # uncomment
-        # signal.alarm(self.alarm_period)
+        return
         if signum == signal.SIGALRM:
             # print('received timer alarm', time.ctime())
             # print('trying to ping baidu.com')
@@ -239,80 +234,3 @@ class Service:
             signal.alarm(self.alarm_period)
 
 
-class Client:
-    def __init__(self, host=HOST, port=PORT):
-        self.config_manager = None
-        self.config = None
-        self.server_link = None
-        self.network = None
-        self.sock = None
-        self.host = host
-        self.port = port
-
-        self.connect_to_service()
-
-    def connect_to_service(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.host, self.port))
-        self.sock.setblocking(False)
-        # self.sock.settimeout(5)
-        logging.info('connected to %s:%d' % (self.host, self.port))
-
-    def start(self):
-        # FIXME: clear exception (SystemExit) when using ctrl-c to exit 
-        args = shell.parse_args()
-        if args.command:
-            if args.c:
-                config_path = args.c
-            else:
-                config_path = shell.find_config(True)
-            # In cmd mode, we always load config from config file.
-            # And we intentionally do not parse_config for possibly missing some arguments.
-            logging.debug('loading config from: {}'.format(config_path))
-
-            cmd = ' '.join(s for s in sys.argv[1:])
-            resp = self.request(cmd)
-            print(*resp, sep='', end='')
-            if not args.i:
-                if args.d:
-                    print('daemonizing')
-                    daemon.daemon_start('/tmp/y.pid')
-                return
-            while True:
-                commands = input(">>> ")
-                if commands == 'quit' or commands == 'exit':
-                    break
-                resp = self.request(commands)
-                print(*resp, sep='', end='')
-            if args.d:
-                print('daemonizing')
-                daemon.daemon_start()
-
-        else:  # old procedure
-            config = shell.parse_config(True)
-            self.network = network.ClientNetwork(config)
-            self.network.start()
-
-    def request(self, req, timeout=20):
-        self.sock.setblocking(True)
-        self.sock.send(req.encode('utf-8'))
-        resp = []
-
-        # FIXME: exit if any connection problem
-        # TODO: 'ACK' as marker for start communication and acception, 'FIN' as communication end
-        _READ = False
-        self.sock.settimeout(0.1)
-        end_time = time.time() + timeout
-        while time.time() < end_time:
-            try:
-                packet = self.sock.recv(4096)
-                resp.append(packet.decode('utf-8'))
-                if not _READ:
-                    _READ = True
-                    self.sock.setblocking(False)
-            except socket.error as e:       # when no data can be received
-                if not _READ:
-                    pass
-                else:
-                    break
-        return resp if resp else ('timeout\n')

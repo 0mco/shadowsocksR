@@ -75,7 +75,14 @@ def is_valide_ssrlink(ssrlink):
     return ssrlink[:6] == 'ssr://'
 
 
-def is_duplicated(link1, link2):
+def config_equal(config1, config2):
+    for config in ['server', 'server_port']:            # the simple, the better
+        if config1[config] != config2[config]:
+            return False
+    return True
+
+
+def ssrlink_equal(link1, link2):
     ssr1 = decode_ssrlink(link1)
     ssr2 = decode_ssrlink(link2)
     # for config in ['server', 'server_port', 'password', 'protocol', 'method', 'obfs']:

@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
 # NOTE: add '../../' to path if you want to execute directly.
 from shadowsocks.lib import shell
-from shadowsocks.core import service
+from shadowsocks.core import service, client
 
 
 logging.basicConfig(level=logging.DEBUG,
@@ -56,12 +56,12 @@ def main():
     s = service.Service()
     # FIXME: somehow a daemon cannot be killed, and cannot connect to it
     if not s.is_running():
-        logging.info('starting daemon')
+        logging.info('starting service')
         s.start()
     else:
-        logging.info('daemon already started')
+        logging.info('service already started')
     # s.start()
-    service.Client().start()
+    client.Client().start()
 
 
 if __name__ == '__main__':

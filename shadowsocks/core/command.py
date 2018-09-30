@@ -1,4 +1,5 @@
 from shadowsocks.lib.ssrlink import decode_ssrlink, encode_to_link
+from shadowsocks.lib import ssrlink
 from shadowsocks.lib import shell
 from shadowsocks.core import daemon, network
 from shadowsocks.lib.shell import print_server_info
@@ -27,7 +28,8 @@ class BaseCommands:
     def __init__(self, cmd, target, args):
         self.cmd = cmd
         self.target = target
-        self.args = args
+        self.args, self.extra_args = args
+        # self.args = args
         if not hasattr(self, 'SUBCMDS'):
             self.SUBCMDS = {}
 
@@ -59,22 +61,22 @@ class Commands(BaseCommands):
     # @register
     def server(self):
         target, args = self.target, self.args
-        ServerCommands(args.subcmd, target, args)
+        ServerCommands(args.subcmd, target, (self.args, self.extra_args))
 
     def feed(self):
         target, args = self.target, self.args
-        FeedCommands(args.subcmd, target, args)
+        FeedCommands(args.subcmd, target, (self.args, self.extra_args))
 
     def status(self):
         target, args = self.target, self.args
         if hasattr(args, 'subcmd'):
-            StatusCommands(args.subcmd, target, args)
+            StatusCommands(args.subcmd, target, (self.args, self.extra_args))
         else:
-            StatusCommands('info', target, args)
+            StatusCommands('info', target, (self.args, self.extra_args))
 
     def config(self):
         target, args = self.target, self.args
-        ConfigCommands(args.subcmd, target, args)
+        ConfigCommands(args.subcmd, target, (self.args, self.extra_args))
 
 
 class ServerCommands(BaseCommands):
@@ -88,54 +90,24 @@ class ServerCommands(BaseCommands):
         header = ' ' * 40 + 'SERVER LIST' + ' ' * 40
         print_server_info(servers, header=header, indexed=True, verbose=True, hightlight=True)
 
-    def _test_switch(self):
-        target = self.target
-        # When network error, switch ssr randomly
-        # test switch ssr
-        ssrs = target.get_server_list()
-        first = True
-        import time
-        for ssr in ssrs:
-            config_from_link = decode_ssrlink(ssr)
-            config = shell.parse_config(True, config_from_link)
-            # config['daemon'] = 'start'
-            print_server_info(config)
-            if first:
-                target.network = network.ClientNetwork(config)
-                target.network.start()
-                first = False
-            else:
-                target.network.switch(config)
-            time.sleep(20)
-        print('all ssr tested')
-
     def switch(self):
         self.target.random_switch_ssr()
 
     def connect(self):
         target = self.target
-        ssr = target.get_server_list()[0]
-        config_from_link = decode_ssrlink(ssr)
-        config = shell.parse_config(True, config_from_link)
-        daemon.daemon_exec(config)
-        target.network = network.ClientNetwork(config)
-        target.network.start()
-
-    def start(self):
-        target = self.target
-        ssr = target.get_server_list()[0]
-        # FIXME: why this would spend so much time?!
-        # if self.args.addr:
-        #     ssr = target.get_server_by_addr(self.args.addr)
-
+        if self.extra_args:
+            try:
+                ssr = target.get_server_list()[int(self.extra_args[0]) - 1]
+            except ValueError as e:
+                print(e)
+                return
+        else:
+            ssr = target.get_server_list()[0]
         config_from_link = decode_ssrlink(ssr)
         config = shell.parse_config(True, config_from_link)
         target.config = config
         target.server_link = ssr
-        # if self.args.d:
-        #     daemon.daemon_start()
         print_server_info(target.config, verbose=True, hightlight=True)
-        # print("starting:\n", self.target.config, self.target.server_link)
         if target.network is None:
             print('creating ClientNetwork')
             target.network = network.ClientNetwork(target.config)
@@ -144,37 +116,43 @@ class ServerCommands(BaseCommands):
             print('ClientNetwork already exists')
             target.network.add(target.config)
 
-    def quit(self):
-        """quit the daemon"""
-        # exit(0)
-        pass
+    def disconnect(self):
+        connected_servers = self.target.network.get_servers()
+        if self.extra_args:
+            try:
+                choice = int(self.extra_args[0]) - 1
+            except ValueError as e:
+                print(e)
+                return
+        else:
+            choice = user_chooice(connected_servers, message='please input the number which you want to disconnect')
+            choice = int(choice) - 1
+        self.target.network.remove(connected_servers[choice])
 
     def add(self):
         if self.args.L:
             link = self.args.L
+        elif self.extra_args and ssrlink.is_valide_ssrlink(self.extra_args[0]):
+            link = self.extra_args[0]
         else:
-            # config = {}
-            # config['server'] = input('sever address:')
-            # config['server_port'] = input('sever port:')
-            # config['protocol'] = input('protocol:')
-            # config['method'] = input('method:')
-            # config['obfs'] = input('obfs:')
-            # config['password'] = input('password:')
             config = shell.parse_config(True)
             link = encode_to_link(config)
             print(link)
-            return
         self.target.config.add_server(link)
 
     def remove(self):
         server_list = self.target.config.get_server()
-        choice = user_chooice(
-            server_list,
-            message='please input the number which you want to remove')
-        choice = int(choice) - 1
+        if self.extra_args:
+            try:
+                choice = int(self.extra_args[0])
+            except ValueError as e:
+                print(e)
+                return
+        else:
+            choice = user_chooice(server_list, message='please input the number which you want to remove')
+            choice = int(choice) - 1
         del server_list[choice]
         self.target.config.update_server_list(server_list)
-        pass
 
     def stop(self):
         # FIXME: assert started first
@@ -184,9 +162,16 @@ class ServerCommands(BaseCommands):
         self.stop()
         self.start()
 
+    def quit(self):
+        """quit the daemon"""
+        # exit(0)
+        pass
+
     def status(self):
         """print network information (ping/connectivity) of servers."""
-        print(self.target.config, self.target.server_link)
+        # print(self.target.config, self.target.server_link)
+        connected_servers = self.target.network.get_servers()
+        print_server_info(connected_servers)
 
     def rediscover(self):
         target = self.target
@@ -299,6 +284,6 @@ class ConfigCommands(BaseCommands):
 def user_chooice(options, message):
     # for i in range(len(options)):
     #     print('%-2d ' % (i+1) + options[i])
-    print_server_info((decode_ssrlink(ssr) for ssr in options), indexed=True)
+    print_server_info((decode_ssrlink(ssr) if isinstance(ssr, str) else ssr for ssr in options), indexed=True)
     print(message)
     return input()
