@@ -20,7 +20,6 @@ from __future__ import absolute_import, division, print_function, \
 import os, sys
 import logging
 
-
 file_dir = os.path.dirname(os.path.realpath(__file__))
 log_dir = os.path.realpath(os.path.join(file_dir, '../log'))
 if __name__ == '__main__':
@@ -31,6 +30,7 @@ from shadowsocks.lib import shell
 from shadowsocks.core import service, client
 
 logger = logging.getLogger('shadowsocksr')
+
 
 def main():
     shell.check_python()
@@ -49,8 +49,6 @@ def main():
         s.start()
     else:
         logger.info('service already started')
-    # s.start()
-    global logger
     logger.error('started')
     client.Client().start()
 

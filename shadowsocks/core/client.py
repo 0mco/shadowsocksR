@@ -68,6 +68,8 @@ class Client:
                 return
             while True:
                 commands = input(">>> ")
+                if commands == '':
+                    continue
                 if commands == 'quit' or commands == 'exit':
                     break
                 resp = self.request(commands)
@@ -95,6 +97,7 @@ class Client:
             try:
                 packet = self.sock.recv(4096)
                 resp.append(packet.decode('utf-8'))
+                # resp.append(packet)
                 if not _READ:
                     _READ = True
                     self.sock.setblocking(False)

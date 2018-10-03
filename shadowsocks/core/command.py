@@ -141,18 +141,32 @@ class ServerCommands(BaseCommands):
         self.target.config.add_server(link)
 
     def remove(self):
-        server_list = self.target.config.get_server()
+        print("**[1]**")
+        server_list = self.target.get_server_list()
+        print("**[2]**")
         if self.extra_args:
             try:
-                choice = int(self.extra_args[0])
+                choice = int(self.extra_args[0]) - 1
+                print("**[3]**")
             except ValueError as e:
+                print(5)
                 print(e)
                 return
         else:
             choice = user_chooice(server_list, message='please input the number which you want to remove')
             choice = int(choice) - 1
+        print("**[4]**")
+        print("**[7]**", type(choice), choice, type(server_list))
+        print_server_info(decode_ssrlink(server_list[choice]), verbose=True, hightlight=True)
         del server_list[choice]
-        self.target.config.update_server_list(server_list)
+        self.target.config_manager.update_server_list(server_list)
+        # answer = input('you want to remove it from server list?\n')
+        # if answer == 'y':
+        #     del server_list[choice]
+        #     self.target.config.update_server_list(server_list)
+        #     print('removed it')
+        # else:
+        #     print('nothing done')
 
     def stop(self):
         # FIXME: assert started first
@@ -170,6 +184,9 @@ class ServerCommands(BaseCommands):
     def status(self):
         """print network information (ping/connectivity) of servers."""
         # print(self.target.config, self.target.server_link)
+        if not self.target.network:
+            print('no server connected to')
+            return
         connected_servers = self.target.network.get_servers()
         print_server_info(connected_servers)
 

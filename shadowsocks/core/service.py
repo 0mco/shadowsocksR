@@ -67,6 +67,8 @@ class Service:
                                 raise ConnectionResetError('peer closed')
                                 break
                             output = io.StringIO()
+                            # FIXME: This is not thread safe, if multiple clients connected to server,
+                            # the output will mess
                             # with redirect_stderr(output):
                             with open('/dev/null', 'w'):
                                 with redirect_stdout(output):
