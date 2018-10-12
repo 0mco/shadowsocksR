@@ -81,7 +81,7 @@ class ClientNetwork(Network):
     def remove(self, config_to_remove):  # TODO: use only one single to toggle pause/resume
         """close tcp_server, udp_server."""
         print(self.loop_thread, self.loop.is_running())
-        if (not self.loop_thread) or (not self.loop.is_running()):
+        if (not self.loop_thread) or (not self.loop.is_started()):
             logger.error('network not started')
             return
         # FIXME: what about really stop it?
