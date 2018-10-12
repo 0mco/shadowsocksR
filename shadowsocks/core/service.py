@@ -212,7 +212,11 @@ class Service:
         ssrs = self.get_server_list()
         ssr = random.choice(ssrs)
         config_from_link = decode_ssrlink(ssr)
+        local_address = self.config['local_address']
+        local_port = self.config['local_port']
         self.config = shell.parse_config(True, config_from_link)
+        self.config['local_address'] = local_address
+        self.config['local_port'] = local_port
         print_server_info(self.config, verbose=True, hightlight=True)
         self.network.switch(self.config)
 
