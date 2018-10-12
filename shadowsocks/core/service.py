@@ -48,13 +48,14 @@ class Service:
         #     logger.info('daemonizing')
         #     daemon.daemon_start('/tmp/zzz.pid')
 
-        class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-        # class ThreadedTCPServer(socketserver.TCPServer):
+        # class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+        class ThreadedTCPServer(socketserver.TCPServer):
             def server_bind(self):
                 self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.socket.bind(self.server_address)
 
         class RequestHandler(socketserver.BaseRequestHandler):
+            # TODO: restore io fd when finished!!
             def handle(self):
                 nonlocal service
                 logger.info("new client:")
@@ -95,13 +96,10 @@ class Service:
                             command.Commands(args.command, service, (args, extra_args))
                             print('execute `%s %s` done' % (args.command, args.subcmd), file=sys.stderr)
 
-                    except (BrokenPipeError, ConnectionResetError, OSError, EOFError) as e:
+                    except (BrokenPipeError, ConnectionResetError, EOFError) as e:
                         print("connection lost", file=sys.stderr)
-                        break
-                    except Exception as e:
-                        print(e, file=sys.stderr)
-                        break
-                    finally:
+                        print(e)
+
                         _stdin = open('/dev/null', 'r')
                         _stdout = open('/dev/null', 'w')
                         os.close(0)
@@ -110,6 +108,12 @@ class Service:
                         os.dup2(_stdin.fileno(), 0)
                         os.dup2(_stdout.fileno(), 1)
                         # os.dup2(_stdout.fileno(), 2)
+                        break
+                    except Exception as e:
+                        print(e, file=sys.stderr)
+                        print(e)
+                        logger.error(e)
+                    # finally:
 
                 print("connection lost", file=sys.stderr)
 

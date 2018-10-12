@@ -34,6 +34,7 @@ class Client:
         self.port = port
 
     def connect_to_service(self):
+        # FIXME: catch error when connecting
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
         self.sock.setblocking(False)
@@ -75,7 +76,7 @@ class Client:
                 if args.d:
                     print('daemonizing')
                     # daemon.daemon_start('/tmp/y.pid')
-                time.sleep(3)
+                time.sleep(1)       # waiting for result to show
                 return
             while True:
                 time.sleep(0.5)

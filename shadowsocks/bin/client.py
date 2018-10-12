@@ -55,37 +55,37 @@ def main():
     if s.is_running():
         client.Client().start()
     else:
-        args = shell.parse_args()[0]
-        if args.d:
-            pid = os.fork()
-            if pid > 0:     # parent
-                import time
-                time.sleep(3)
-                client.Client().start()
-            else:
-                import signal
-                os.setsid()
-                signal.signal(signal.SIGHUP, signal.SIG_IGN)
-                _stdin = open('/dev/null', 'r')
-                # _stdout = open('/dev/null', 'w')
-                _stdout = open('/tmp/x', 'w')
-                # this is the wrong way!!
-                # sys.stdin.close()
-                # sys.stdout.close()
-                # sys.stderr.close()
-                os.close(0)
-                os.close(1)
-                os.close(2)
-                os.dup2(_stdin.fileno(), 0)
-                os.dup2(_stdout.fileno(), 1)
-                os.dup2(_stdout.fileno(), 2)
-                s.start()
-        else:
-            import threading
+        # args = shell.parse_args()[0]
+        # if args.d:
+        pid = os.fork()
+        if pid > 0:     # parent
             import time
-            threading.Thread(target=s.start).start()
             time.sleep(3)
             client.Client().start()
+        else:
+            import signal
+            os.setsid()         # detach from current session
+            signal.signal(signal.SIGHUP, signal.SIG_IGN)        # handle terminal closed signal
+            _stdin = open('/dev/null', 'r')
+            # _stdout = open('/dev/null', 'w')
+            _stdout = open('/tmp/x', 'w')
+            # this is the wrong way!!
+            # sys.stdin.close()
+            # sys.stdout.close()
+            # sys.stderr.close()
+            os.close(0)
+            os.close(1)
+            os.close(2)
+            os.dup2(_stdin.fileno(), 0)
+            os.dup2(_stdout.fileno(), 1)
+            os.dup2(_stdout.fileno(), 2)
+            s.start()
+        # else:                 # we cannot do the io tricks in one single process
+        #     import threading
+        #     import time
+        #     threading.Thread(target=s.start).start()
+        #     time.sleep(3)
+        #     client.Client().start()
 
 
 if __name__ == '__main__':
