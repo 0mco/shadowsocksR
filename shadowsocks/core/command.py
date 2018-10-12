@@ -1,8 +1,10 @@
 from shadowsocks.lib.ssrlink import decode_ssrlink, encode_to_link
 from shadowsocks.lib import ssrlink
 from shadowsocks.lib import shell
-from shadowsocks.core import daemon, network
+from shadowsocks.core import network
 from shadowsocks.lib.shell import print_server_info
+import sys
+import logging
 
 # won't work, because it will not automatically execute.
 # def register(func):
@@ -14,6 +16,9 @@ from shadowsocks.lib.shell import print_server_info
 #         return func(self, *args, **kwargs)
 #
 #     return decorated
+
+
+logger = logging.getLogger('shadowsocksr')
 
 
 class BaseCommands:
@@ -78,6 +83,10 @@ class Commands(BaseCommands):
         target, args = self.target, self.args
         ConfigCommands(args.subcmd, target, (self.args, self.extra_args))
 
+    def service(self):
+        target, args = self.target, self.args
+        ServiceCommands(args.subcmd, target, (self.args, self.extra_args))
+
 
 class ServerCommands(BaseCommands):
     def __init__(self, cmd, target, args):
@@ -141,13 +150,10 @@ class ServerCommands(BaseCommands):
         self.target.config.add_server(link)
 
     def remove(self):
-        print("**[1]**")
         server_list = self.target.get_server_list()
-        print("**[2]**")
         if self.extra_args:
             try:
                 choice = int(self.extra_args[0]) - 1
-                print("**[3]**")
             except ValueError as e:
                 print(5)
                 print(e)
@@ -155,8 +161,6 @@ class ServerCommands(BaseCommands):
         else:
             choice = user_chooice(server_list, message='please input the number which you want to remove')
             choice = int(choice) - 1
-        print("**[4]**")
-        print("**[7]**", type(choice), choice, type(server_list))
         print_server_info(decode_ssrlink(server_list[choice]), verbose=True, hightlight=True)
         del server_list[choice]
         self.target.config_manager.update_server_list(server_list)
@@ -179,7 +183,6 @@ class ServerCommands(BaseCommands):
 
     def quit(self):
         """quit the daemon"""
-        # exit(0)
         pass
 
     def status(self):
@@ -249,6 +252,39 @@ class StatusCommands(BaseCommands):
 
     def info(self):
         print('this is status info')
+
+
+class ServiceCommands(BaseCommands):
+    def __init__(self, cmd, target, args):
+        super().__init__(cmd, target, args)
+
+    def stop(self):
+        pass
+
+    def start(self):
+        pass
+
+    def restart(self):
+        pass
+
+    def daemonize(self):
+        pass
+
+    def quit(self):
+        # FIXME: how to exit in socketserver?!!
+        print('exiting')
+        self.target.service_server.shutdown()
+        logger.info('service exiting')
+        import os
+        os._exit()
+        try:
+            # sys.exit(0)
+            import os
+            os._exit()
+            pass
+        except SystemExit:
+            print("**[17]**", file=sys.stderr)
+            pass
 
 
 class ConfigCommands(BaseCommands):

@@ -19,6 +19,8 @@ from __future__ import absolute_import, division, print_function, \
     with_statement
 import os, sys
 import logging
+import time
+import signal
 
 file_dir = os.path.dirname(os.path.realpath(__file__))
 log_dir = os.path.realpath(os.path.join(file_dir, '../log'))
@@ -43,49 +45,29 @@ def main():
         os.chdir(p)
 
     s = service.Service()
-    # FIXME: somehow a daemon cannot be killed, and cannot connect to it
-    # if not s.is_running():
-    #     logger.info('starting service')
-    #     s.start()
-    # else:
-    #     logger.info('service already started')
-    # logger.error('started')
-    # client.Client().start()
 
     if s.is_running():
         client.Client().start()
     else:
-        # args = shell.parse_args()[0]
-        # if args.d:
         pid = os.fork()
         if pid > 0:     # parent
-            import time
-            time.sleep(3)
+            time.sleep(3)           # waiting for service to start
+            del s
             client.Client().start()
         else:
-            import signal
             os.setsid()         # detach from current session
             signal.signal(signal.SIGHUP, signal.SIG_IGN)        # handle terminal closed signal
-            _stdin = open('/dev/null', 'r')
+            _input = open('/dev/null', 'r')
             # _stdout = open('/dev/null', 'w')
-            _stdout = open('/tmp/x', 'w')
-            # this is the wrong way!!
-            # sys.stdin.close()
-            # sys.stdout.close()
-            # sys.stderr.close()
+            # FIXME: replace with /dev/null
+            _output = open('/tmp/shadowsocks_output', 'w')
             os.close(0)
             os.close(1)
             os.close(2)
-            os.dup2(_stdin.fileno(), 0)
-            os.dup2(_stdout.fileno(), 1)
-            os.dup2(_stdout.fileno(), 2)
+            os.dup2(_input.fileno(), 0)
+            os.dup2(_output.fileno(), 1)
+            os.dup2(_output.fileno(), 2)
             s.start()
-        # else:                 # we cannot do the io tricks in one single process
-        #     import threading
-        #     import time
-        #     threading.Thread(target=s.start).start()
-        #     time.sleep(3)
-        #     client.Client().start()
 
 
 if __name__ == '__main__':

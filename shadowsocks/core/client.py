@@ -1,30 +1,13 @@
-from shadowsocks.core import daemon, network, command
-from shadowsocks.lib import shell, ssrlink
-from shadowsocks.lib.config import ClientConfigManager
-from shadowsocks.lib.ssrlink import decode_ssrlink
-from shadowsocks.plugins.subscribe import fetch_ssr
-from shadowsocks.lib.shell import print_server_info
-from shadowsocks.core.command import ServerCommands
-import logging
-from datetime import date
-import signal
+from shadowsocks.core import network
+from shadowsocks.lib import shell
 import socket
-import json
-import os, sys
-import errno
+import sys
 import threading
-import socketserver
 import time
-import io
-from contextlib import redirect_stdout
-from contextlib import redirect_stderr
-import argparse
 
 # TODO: move config to config/global.py
 HOST = '127.0.0.1'
 PORT = 6113
-
-logger = logging.getLogger('shadowsocksr')
 
 
 class Client:
@@ -39,7 +22,7 @@ class Client:
         self.sock.connect((self.host, self.port))
         self.sock.setblocking(False)
         # self.sock.settimeout(5)
-        logger.info('connected to %s:%d' % (self.host, self.port))
+        print('connected to %s:%d' % (self.host, self.port))
         threading.Thread(target=self.retrive_output, args=(self.sock,), daemon=True).start()
 
     def retrive_output(self, sock):
@@ -51,31 +34,20 @@ class Client:
                     packet = sock.recv(4096)
                     print(packet.decode('utf-8'), end='')
             except socket.error as e:       # when no data can be received
+                # FIXME: carefully handle error
                 print('network error')
             except Exception as e:
-                print('connection disconnected')
+                print("**[4]**", file=sys.stderr)
                 print(e)
 
     def start(self):
         self.connect_to_service()
-        # FIXME: clear exception (SystemExit) when using ctrl-c to exit 
+        # FIXME: clear exception (SystemExit) when using ctrl-c to exit
         args, extra_args = shell.parse_args()
         if args.command:
-            if args.c:
-                config_path = args.c
-            else:
-                config_path = shell.find_config(True)
-            # In cmd mode, we always load config from config file.
-            # And we intentionally do not parse_config for possibly missing some arguments.
-            logger.debug('loading config from: {}'.format(config_path))
-
             cmd = ' '.join(s for s in sys.argv[1:])
             self.execute(cmd)
-            # print(*resp, sep='', end='')
             if not args.i:
-                if args.d:
-                    print('daemonizing')
-                    # daemon.daemon_start('/tmp/y.pid')
                 time.sleep(1)       # waiting for result to show
                 return
             while True:
@@ -86,17 +58,14 @@ class Client:
                 if cmd == 'quit' or cmd == 'exit':
                     break
                 self.execute(cmd)
-            if args.d:
-                print('daemonizing')
-                daemon.daemon_start()
 
-        else:  # old procedure
+        else:  # backward compatibility
             config = shell.parse_config(True)
             self.network = network.ClientNetwork(config)
             self.network.start()
 
     def execute(self, req, timeout=20):
         self.sock.setblocking(True)
-        # TODO: in Windows we should add '\r'?
+        # FIXME: in Windows we should add '\r'?
         self.sock.send((req + '\n').encode('utf-8'))
         return

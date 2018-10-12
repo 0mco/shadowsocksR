@@ -1,24 +1,18 @@
-from shadowsocks.core import daemon, network, command
+from shadowsocks.core import command
 from shadowsocks.lib import shell, ssrlink
 from shadowsocks.lib.config import ClientConfigManager
 from shadowsocks.lib.ssrlink import decode_ssrlink
 from shadowsocks.plugins.subscribe import fetch_ssr
 from shadowsocks.lib.shell import print_server_info
-from shadowsocks.core.command import ServerCommands
 import logging
 from datetime import date
 import signal
 import socket
-import json
 import os, sys
 import errno
 import threading
 import socketserver
 import time
-import io
-from contextlib import redirect_stdout
-from contextlib import redirect_stderr
-import argparse
 
 logger = logging.getLogger('shadowsocksr')
 # TODO: move config to config/global.py
@@ -33,6 +27,7 @@ class Service:
         self.server_link = None
         self.alarm_period = 20
         self.network = None
+        self.service_server = None
         self.sock = None
         self.host = host
         self.port = port
@@ -42,11 +37,6 @@ class Service:
 
     def start(self):
         service = self
-        # args = shell.parse_args()[0]
-        # if args.d:
-        #     # TODO: the daemon should be started in another process
-        #     logger.info('daemonizing')
-        #     daemon.daemon_start('/tmp/zzz.pid')
 
         # class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         class ThreadedTCPServer(socketserver.TCPServer):
@@ -84,7 +74,7 @@ class Service:
                                 # And we intentionally do not parse_config for possibly missing some arguments.
                                 logger.debug('loading config from: {}'.format(config_path))
                                 service.config_manager = ClientConfigManager(config_path)
-                                # TODO: check update after connection is established
+                                # TODO: check update after connection is established (using threading)
                                 # if service.config_manager.get_auto_update_config() and \
                                 #         (service.config_manager.get_last_update_time() != \
                                 #           date.today().strftime('%Y-%m-%d')):
@@ -92,7 +82,8 @@ class Service:
                                 #    self.fetch_server_list()
 
                             print('executing: `%s %s`' % (args.command, args.subcmd), file=sys.stderr)
-                            # execute in another thread, and using pipe to async direct output another fd, and send the output async to client
+                            # execute in another thread, and using pipe to async direct output another fd,
+                            # and send the output async to client
                             command.Commands(args.command, service, (args, extra_args))
                             print('execute `%s %s` done' % (args.command, args.subcmd), file=sys.stderr)
 
@@ -111,6 +102,7 @@ class Service:
                         break
                     except Exception as e:
                         print(e, file=sys.stderr)
+                        print("**[3]**", file=sys.stderr)
                         print(e)
                         logger.error(e)
                     # finally:
@@ -121,12 +113,13 @@ class Service:
         # and error level are different
         logger.info("binding on %s:%d" % (self.host, self.port))
         # logger.error("binding on %s:%d" % (self.host, self.port))
-        # logger.error("hello, this is just a test")
         try:
             # server = socketserver.TCPServer((self.host, self.port), RequestHandler)
-            server = ThreadedTCPServer((self.host, self.port), RequestHandler)
+            self.service_server = ThreadedTCPServer((self.host, self.port), RequestHandler)
+            # FIXME: it seems that socketserver catch SystemExit?
+            # sys.exit(0)
             # threading.Thread(target=server.serve_forever).start()
-            server.serve_forever()
+            self.service_server.serve_forever()
 
             # set timer for unix-like system:
             # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
@@ -149,7 +142,9 @@ class Service:
 
     def daemonize(self):
         # TODO: change the pid file, and add dedaemonize
-        shell.daemon_start('/tmp/zzz.pid')
+        # args, extra_args = shell.parse_args()
+        # shell.daemon_start('/tmp/zzz.pid')
+        pass
 
     def add_feed_source(self, addr):
         self.config_manager.add_subscription(addr)
@@ -249,5 +244,3 @@ class Service:
                     'Network error detected, trying to switch a server')
                 self._throw_network_error_signal()
             signal.alarm(self.alarm_period)
-
-

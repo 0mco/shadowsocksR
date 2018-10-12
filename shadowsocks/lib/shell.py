@@ -39,7 +39,8 @@ fh = logging.FileHandler('/tmp/shadowsocksr.log', mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
+# ch.setLevel(logging.ERROR)
+ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('%(asctime)s %(levelname)s %(filename)s:%(lineno)s %(message)s',
         datefmt='[%Y-%m-%d %H:%M:%S]')
@@ -92,11 +93,24 @@ def startup_init():
 
 
 def print_exception(e):
-    global verbose
-    logger.error(e)
-    if verbose > 0:
-        import traceback
-        traceback.print_exc()
+    import inspect
+    previous_frame = inspect.currentframe().f_back
+    (filename, line_number, function_name, lines, index) = inspect.getframeinfo(previous_frame)
+    logging.error(filename, line_number, function_name, lines, index)
+    print(filename, line_number, function_name, lines, index, file=sys.stderr)
+
+    # global verbose
+    # logger.error(e)
+    # if verbose > 0:
+    #     import traceback
+    #     traceback.print_exc()
+# def print_exception(e):
+#     return
+#     global verbose
+#     logger.error(e)
+#     if verbose > 0:
+#         import traceback
+#         traceback.print_exc()
 
 
 def __version():
@@ -238,7 +252,7 @@ def parse_config(is_local, config_=None):
     config['local_port'] = config.get('local_port', 1080)
     if is_local:
         # FIXME: enable not provide server addr if daemon stop or restart
-        # if config.get('server', None) is None and not args.command and (not args.d or args.d == 'starat'):
+        # if config.get('server', None) is None and not args.command and (not args.d or args.d == 'start'):
         # if config.get('server', None) is None:
         #     logging.error('server addr not specified')
         #     print_local_help()
@@ -321,6 +335,7 @@ def parse_args(args_=None):
     server_parser = subparsers.add_parser('server', help='xxx')
     feed_parser = subparsers.add_parser('feed', help='yyy')
     status_parser = subparsers.add_parser('status', help='show current status')
+    service_parser = subparsers.add_parser('service', help='service operations')
     config_parser = subparsers.add_parser('config', help='yyy')
 
     server_parser.add_argument('subcmd', help='server command')
@@ -330,11 +345,12 @@ def parse_args(args_=None):
     feed_parser.add_argument('subcmd', help='subscription command')
     feed_parser.add_argument('--source', help='souurce address')
     # status_parser.add_argument('subcmd', help='show current status')
+    service_parser.add_argument('subcmd', help='show current status')
     config_parser.add_argument('subcmd', help='show current status')
     # config_parser.add_argument('-c', help='path to the import config file')
     config_parser.add_argument('-o', help='path to the :xport config file')
 
-    for p in (parser, server_parser, feed_parser, status_parser, config_parser):
+    for p in (parser, server_parser, feed_parser, status_parser, config_parser, service_parser):
         p.add_argument('-b', metavar='LOCAL_ADDR', help='local address', default='127.0.0.1')
         p.add_argument('-l', metavar='LOCAL_PORT', help='local port', default='1080')
         p.add_argument('-i', action='store_true', help='start in interactive mode')
