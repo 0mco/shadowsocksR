@@ -11,6 +11,7 @@ import signal
 
 logger = logging.getLogger('shadowsocksr')
 
+
 class Network:
     pass
 

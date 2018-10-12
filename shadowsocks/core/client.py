@@ -29,10 +29,6 @@ logger = logging.getLogger('shadowsocksr')
 
 class Client:
     def __init__(self, host=HOST, port=PORT):
-        self.config_manager = None
-        self.config = None
-        self.server_link = None
-        self.network = None
         self.sock = None
         self.host = host
         self.port = port
@@ -45,6 +41,19 @@ class Client:
         self.sock.setblocking(False)
         # self.sock.settimeout(5)
         logger.info('connected to %s:%d' % (self.host, self.port))
+        threading.Thread(target=self.retrive_output, args=(self.sock,)).start()
+
+    def retrive_output(self, sock):
+        sock.settimeout(1)
+        try:
+            while True:
+                time.sleep(0.2)
+                packet = sock.recv(4096)
+                print(packet.decode('utf-8'), end='')
+        except socket.error as e:       # when no data can be received
+            print('network error')
+        except Exception as e:
+            print('connection disconnected')
 
     def start(self):
         # FIXME: clear exception (SystemExit) when using ctrl-c to exit 
@@ -59,21 +68,21 @@ class Client:
             logger.debug('loading config from: {}'.format(config_path))
 
             cmd = ' '.join(s for s in sys.argv[1:])
-            resp = self.request(cmd)
-            print(*resp, sep='', end='')
+            self.execute(cmd)
+            # print(*resp, sep='', end='')
             if not args.i:
                 if args.d:
                     print('daemonizing')
                     daemon.daemon_start('/tmp/y.pid')
                 return
             while True:
+                time.sleep(0.5)
                 commands = input(">>> ")
                 if commands == '':
                     continue
                 if commands == 'quit' or commands == 'exit':
                     break
-                resp = self.request(commands)
-                print(*resp, sep='', end='')
+                self.execute(commands)
             if args.d:
                 print('daemonizing')
                 daemon.daemon_start()
@@ -83,27 +92,8 @@ class Client:
             self.network = network.ClientNetwork(config)
             self.network.start()
 
-    def request(self, req, timeout=20):
+    def execute(self, req, timeout=20):
         self.sock.setblocking(True)
-        self.sock.send(req.encode('utf-8'))
-        resp = []
-
-        # FIXME: exit if any connection problem
-        # TODO: 'ACK' as marker for start communication and acception, 'FIN' as communication end
-        _READ = False
-        self.sock.settimeout(0.1)
-        end_time = time.time() + timeout
-        while time.time() < end_time:
-            try:
-                packet = self.sock.recv(4096)
-                resp.append(packet.decode('utf-8'))
-                # resp.append(packet)
-                if not _READ:
-                    _READ = True
-                    self.sock.setblocking(False)
-            except socket.error as e:       # when no data can be received
-                if not _READ:
-                    pass
-                else:
-                    break
-        return resp if resp else ('timeout\n')
+        # TODO: in Windows we should add '\r'?
+        self.sock.send((req + '\n').encode('utf-8'))
+        return

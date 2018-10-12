@@ -4,3 +4,7 @@
     * connect by id, ip, etc
     * command `server status`
     * detect connection quality by directly using the ss connection, not just test the connection to the host
+
+
+## BUGFIX
+    * io error in daemon process when closed stdin/stdout/stderr (possiblely setsid()?)

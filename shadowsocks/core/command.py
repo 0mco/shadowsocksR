@@ -170,6 +170,7 @@ class ServerCommands(BaseCommands):
 
     def stop(self):
         # FIXME: assert started first
+        # TODO: server.shutdown(), server.close()
         self.target.network.stop()
 
     def restart(self):

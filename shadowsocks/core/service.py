@@ -44,10 +44,12 @@ class Service:
         service = self
         args = shell.parse_args()[0]
         if args.d:
+            # TODO: the daemon should be started in another process
             print('daemonizing')
             daemon.daemon_start('/tmp/zzz.pid')
 
-        class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+        # class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+        class ThreadedTCPServer(socketserver.TCPServer):
             def server_bind(self):
                 self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.socket.bind(self.server_address)
@@ -56,63 +58,60 @@ class Service:
             def handle(self):
                 nonlocal service
                 logger.info("new client:")
-                # logging.info("new client:", addr)
+
+                os.close(0)
+                os.close(1)
+                # os.close(2)
+                os.dup2(self.request.fileno(), 0)
+                os.dup2(self.request.fileno(), 1)
+                # os.dup2(self.request.fileno, 2)
+
                 while True:
                     try:
                         while True:
-                            request = self.request.recv(4096).decode('utf-8')
-                            if not request:
-                                print('closed', file=sys.stderr)
-                                # FIXME:
-                                raise ConnectionResetError('peer closed')
-                                break
-                            output = io.StringIO()
-                            # FIXME: This is not thread safe, if multiple clients connected to server,
-                            # the output will mess
-                            # with redirect_stderr(output):
-                            with open('/dev/null', 'w'):
-                                with redirect_stdout(output):
-                                    args, extra_args = shell.parse_args(request.split())
-                                    if args.command:
-                                        if args.c:
-                                            config_path = args.c
-                                        else:
-                                            config_path = shell.find_config(True)
-                                        # In cmd mode, we always load config from config file.
-                                        # And we intentionally do not parse_config for possibly missing some arguments.
-                                        logger.debug('loading config from: {}'.format(config_path))
-                                        service.config_manager = ClientConfigManager(config_path)
-                                        # TODO: check update after connection is established
-                                        # if service.config_manager.get_auto_update_config() and \
-                                        #         (service.config_manager.get_last_update_time() != \
-                                        #           date.today().strftime('%Y-%m-%d')):
-                                        #    logging.info('checking feed update')
-                                        #    self.fetch_server_list()
+                            request = input()
+                            args, extra_args = shell.parse_args(request.split())
+                            if args.command:
+                                if args.c:
+                                    config_path = args.c
+                                else:
+                                    config_path = shell.find_config(True)
+                                # In cmd mode, we always load config from config file.
+                                # And we intentionally do not parse_config for possibly missing some arguments.
+                                logger.debug('loading config from: {}'.format(config_path))
+                                service.config_manager = ClientConfigManager(config_path)
+                                # TODO: check update after connection is established
+                                # if service.config_manager.get_auto_update_config() and \
+                                #         (service.config_manager.get_last_update_time() != \
+                                #           date.today().strftime('%Y-%m-%d')):
+                                #    logging.info('checking feed update')
+                                #    self.fetch_server_list()
 
-                                    print('executing: `%s %s`' % (args.command, args.subcmd), file=sys.stderr)
-                                    # execute in another thread, and using pipe to async direct output another fd, and send the output async to client
-                                    command.Commands(args.command, service, (args, extra_args))
-                                    print('execute `%s %s` done' % (args.command, args.subcmd), file=sys.stderr)
-                            resp = output.getvalue()
-                            resp += '\n[DONE]\n'
-                            # TODO: async sending data to client
-                            # TODO: if resp not ending with '\n', add '\n' to the end of resp
-                            self.request.sendall(resp.encode('utf-8'))
-                            print(resp)
-                            print('result sent', file=sys.stderr)
-                    except ConnectionResetError:
-                        print('peer closed', file=sys.stderr)
+                            print('executing: `%s %s`' % (args.command, args.subcmd), file=sys.stderr)
+                            # execute in another thread, and using pipe to async direct output another fd, and send the output async to client
+                            command.Commands(args.command, service, (args, extra_args))
+                            print('execute `%s %s` done' % (args.command, args.subcmd), file=sys.stderr)
+                    except (BrokenPipeError, ConnectionResetError) as e:
+                        # TODO: redirect output to /dev/null
+                        os.close(1)
+                        # os.close(2)
+                        os.dup2(open('/dev/null', 'w').fileno(), 1)
+                        # os.dup2(open('/dev/null'), 2)
                         break
                     except Exception as e:
-                        resp = output.getvalue()
-                        self.request.sendall((resp + str(e)).encode('utf-8'))
-                        print(e)
+                        # print(e, file=sys.stderr)
+                        # os.close(1)
+                        # os.dup2(open('/dev/null', 'w').fileno(), 1)
+                        # sys.stdout = open(os.devnull, 'w')
+                        # print(e)
+                        break
 
         logger.info("binding on %s:%d" % (self.host, self.port))
         try:
             # server = socketserver.TCPServer((self.host, self.port), RequestHandler)
             server = ThreadedTCPServer((self.host, self.port), RequestHandler)
-            threading.Thread(target=server.serve_forever).start()
+            # threading.Thread(target=server.serve_forever).start()
+            server.serve_forever()
 
             # set timer for unix-like system:
             # NOTE: if not add SIGALRM to manager, program will auto quit somehow.
