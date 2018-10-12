@@ -33,29 +33,30 @@ class Client:
         self.host = host
         self.port = port
 
-        self.connect_to_service()
-
     def connect_to_service(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
         self.sock.setblocking(False)
         # self.sock.settimeout(5)
         logger.info('connected to %s:%d' % (self.host, self.port))
-        threading.Thread(target=self.retrive_output, args=(self.sock,)).start()
+        threading.Thread(target=self.retrive_output, args=(self.sock,), daemon=True).start()
 
     def retrive_output(self, sock):
         sock.settimeout(1)
-        try:
-            while True:
-                time.sleep(0.2)
-                packet = sock.recv(4096)
-                print(packet.decode('utf-8'), end='')
-        except socket.error as e:       # when no data can be received
-            print('network error')
-        except Exception as e:
-            print('connection disconnected')
+        while True:
+            try:
+                while True:
+                    time.sleep(0.2)
+                    packet = sock.recv(4096)
+                    print(packet.decode('utf-8'), end='')
+            except socket.error as e:       # when no data can be received
+                print('network error')
+            except Exception as e:
+                print('connection disconnected')
+                print(e)
 
     def start(self):
+        self.connect_to_service()
         # FIXME: clear exception (SystemExit) when using ctrl-c to exit 
         args, extra_args = shell.parse_args()
         if args.command:
@@ -73,16 +74,17 @@ class Client:
             if not args.i:
                 if args.d:
                     print('daemonizing')
-                    daemon.daemon_start('/tmp/y.pid')
+                    # daemon.daemon_start('/tmp/y.pid')
+                time.sleep(3)
                 return
             while True:
                 time.sleep(0.5)
-                commands = input(">>> ")
-                if commands == '':
+                cmd = input(">>> ")
+                if cmd == '':
                     continue
-                if commands == 'quit' or commands == 'exit':
+                if cmd == 'quit' or cmd == 'exit':
                     break
-                self.execute(commands)
+                self.execute(cmd)
             if args.d:
                 print('daemonizing')
                 daemon.daemon_start()

@@ -42,14 +42,14 @@ class Service:
 
     def start(self):
         service = self
-        args = shell.parse_args()[0]
-        if args.d:
-            # TODO: the daemon should be started in another process
-            print('daemonizing')
-            daemon.daemon_start('/tmp/zzz.pid')
+        # args = shell.parse_args()[0]
+        # if args.d:
+        #     # TODO: the daemon should be started in another process
+        #     logger.info('daemonizing')
+        #     daemon.daemon_start('/tmp/zzz.pid')
 
-        # class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-        class ThreadedTCPServer(socketserver.TCPServer):
+        class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+        # class ThreadedTCPServer(socketserver.TCPServer):
             def server_bind(self):
                 self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.socket.bind(self.server_address)
@@ -59,6 +59,9 @@ class Service:
                 nonlocal service
                 logger.info("new client:")
 
+                # NOTE: if you want to use /dev/null, you need first open
+                # the file, and then close fd 0, and finally dup2.
+                # FIXME: daemon stdin/out/err error, maybe os.setsid() will help?
                 os.close(0)
                 os.close(1)
                 # os.close(2)
@@ -91,22 +94,30 @@ class Service:
                             # execute in another thread, and using pipe to async direct output another fd, and send the output async to client
                             command.Commands(args.command, service, (args, extra_args))
                             print('execute `%s %s` done' % (args.command, args.subcmd), file=sys.stderr)
-                    except (BrokenPipeError, ConnectionResetError) as e:
-                        # TODO: redirect output to /dev/null
-                        os.close(1)
-                        # os.close(2)
-                        os.dup2(open('/dev/null', 'w').fileno(), 1)
-                        # os.dup2(open('/dev/null'), 2)
+
+                    except (BrokenPipeError, ConnectionResetError, OSError, EOFError) as e:
+                        print("connection lost", file=sys.stderr)
                         break
                     except Exception as e:
-                        # print(e, file=sys.stderr)
-                        # os.close(1)
-                        # os.dup2(open('/dev/null', 'w').fileno(), 1)
-                        # sys.stdout = open(os.devnull, 'w')
-                        # print(e)
+                        print(e, file=sys.stderr)
                         break
+                    finally:
+                        _stdin = open('/dev/null', 'r')
+                        _stdout = open('/dev/null', 'w')
+                        os.close(0)
+                        os.close(1)
+                        # os.close(2)
+                        os.dup2(_stdin.fileno(), 0)
+                        os.dup2(_stdout.fileno(), 1)
+                        # os.dup2(_stdout.fileno(), 2)
 
+                print("connection lost", file=sys.stderr)
+
+        # FIXME: why two copy of error output? and the format of info
+        # and error level are different
         logger.info("binding on %s:%d" % (self.host, self.port))
+        # logger.error("binding on %s:%d" % (self.host, self.port))
+        # logger.error("hello, this is just a test")
         try:
             # server = socketserver.TCPServer((self.host, self.port), RequestHandler)
             server = ThreadedTCPServer((self.host, self.port), RequestHandler)

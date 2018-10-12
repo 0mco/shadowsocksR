@@ -131,13 +131,23 @@ def daemon_start(pid_file=_default_pid_file, log_file=_default_log_file):
     # FIXME: redirect output to fd 12, instead of not closing stdout, stderr
     # otherwise we cannot receive those output
     # or, it's just because we clsoed it and used print?
+    _stdin = open('/dev/null', 'r')
+    _stdout = open('/dev/null', 'w')
     sys.stdin.close()
-    try:
-        freopen(log_file, 'a', sys.stdout)
-        freopen(log_file, 'a', sys.stderr)
-    except IOError as e:
-        shell.print_exception(e)
-        sys.exit(1)
+    sys.stdout.close()
+    sys.stderr.close()
+    os.dup2(_stdin.fileno(), 0)
+    os.dup2(_stdout.fileno(), 1)
+    os.dup2(_stdout.fileno(), 2)
+
+    # original version
+    # sys.stdin.close()
+    # try:
+    #     freopen(log_file, 'a', sys.stdout)
+    #     freopen(log_file, 'a', sys.stderr)
+    # except IOError as e:
+    #     shell.print_exception(e)
+    #     sys.exit(1)
 
 
 def daemon_stop(pid_file=_default_pid_file):
